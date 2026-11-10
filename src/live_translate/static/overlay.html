@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Live subtitles</title>
+<meta name="viewport" content="width=1920, height=180">
+<style>
+  @font-face {
+    font-family: "Open Sans";
+    src: url("/static/fonts/OpenSans-Variable.ttf") format("truetype");
+    font-weight: 300 800;
+    font-stretch: 75% 100%;
+    font-display: block;
+  }
+  :root {
+    --font-size: 56px;
+    --line-height: 1.36;
+    --lines: 2;
+    --offset: 0px;
+    --shadow: 0 1px 4px rgba(0, 0, 0, 0.55), 0 0 2px rgba(0, 0, 0, 0.6);
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 1920px;
+    height: 180px;
+    overflow: hidden;
+    background: transparent;
+    background-color: rgba(0, 0, 0, 0);
+  }
+  #stage {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(var(--offset));
+  }
+  #window {
+    position: relative;
+    width: 1760px;
+    height: calc(var(--font-size) * var(--line-height) * var(--lines));
+    overflow: hidden;
+    /* Hide the shadow of the line that has rolled out above (it reaches ~8 px down). */
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 calc(var(--font-size) * 0.12));
+    mask-image: linear-gradient(to bottom, transparent 0, #000 calc(var(--font-size) * 0.12));
+  }
+  #text {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    font-family: "Open Sans", sans-serif;
+    font-weight: 600;
+    font-size: var(--font-size);
+    line-height: var(--line-height);
+    color: #ffffff;
+    text-align: center;
+    text-shadow: var(--shadow);
+    overflow-wrap: break-word;
+    will-change: transform;
+  }
+  body.no-shadow #text { text-shadow: none; }
+  #text .interim { opacity: 0.72; }
+  #text.rolling { transition: transform 260ms cubic-bezier(.2, .7, .2, 1); }
+  body.hidden #stage { opacity: 0; }
+  #stage { transition: opacity 250ms linear; }
+  @media (prefers-reduced-motion: reduce) {
+    #text.rolling { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div id="stage"><div id="window"><p id="text"></p></div></div>
+<script>
+(() => {
+  const text = document.getElementById("text");
+  const root = document.documentElement;
+  let lastHeight = 0;
+  let lastKey = "";
+
+  function applyStyle(style) {
+    if (!style) return;
+    root.style.setProperty("--font-size", style.font_size + "px");
+    root.style.setProperty("--line-height", style.line_height);
+    root.style.setProperty("--lines", style.lines);
+    root.style.setProperty("--offset", (style.vertical_offset || 0) + "px");
+    document.body.classList.toggle("no-shadow", !style.shadow);
+  }
+
+  function render(state) {
+    applyStyle(state.style);
+    document.body.classList.toggle("hidden", !state.visible);
+    const confirmed = (state.segments || []).map(s => s.text).join(" ");
+    const interim = state.interim || "";
+    const key = confirmed + "\u0000" + interim;
+    if (key === lastKey) return;
+    lastKey = key;
+
+    // Rebuild text: confirmed in full white, interim slightly dimmed.
+    text.textContent = "";
+    if (confirmed) text.appendChild(document.createTextNode(confirmed));
+    if (interim) {
+      const span = document.createElement("span");
+      span.className = "interim";
+      span.textContent = (confirmed ? " " : "") + interim;
+      text.appendChild(span);
+    }
+
+    // Roll up: when the block grows, start it shifted down by the growth and slide to 0.
+    const h = text.offsetHeight;
+    const grew = h - lastHeight;
+    lastHeight = h;
+    if (grew > 0 && confirmed) {
+      text.classList.remove("rolling");
+      text.style.transform = `translateY(${grew}px)`;
+      void text.offsetHeight; // commit the start position
+      text.classList.add("rolling");
+      text.style.transform = "translateY(0)";
+    } else {
+      text.classList.remove("rolling");
+      text.style.transform = "translateY(0)";
+    }
+  }
+
+  // WebSocket with automatic reconnect; the page never needs a reload.
+  let delay = 500;
+  function connect() {
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${proto}://${location.host}/ws/overlay`);
+    let ping;
+    ws.onopen = () => {
+      delay = 500;
+      ping = setInterval(() => { try { ws.send("ping"); } catch (e) {} }, 15000);
+    };
+    ws.onmessage = ev => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === "state") render(msg);
+      } catch (e) { /* ignore malformed message */ }
+    };
+    ws.onclose = () => {
+      clearInterval(ping);
+      setTimeout(connect, delay);
+      delay = Math.min(delay * 2, 5000);
+    };
+    ws.onerror = () => ws.close();
+  }
+  document.fonts.load('600 56px "Open Sans"').finally(connect);
+})();
+</script>
+</body>
+</html>

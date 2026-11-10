@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Subtitles control</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @font-face {
+    font-family: "Open Sans";
+    src: url("/static/fonts/OpenSans-Variable.ttf") format("truetype");
+    font-weight: 300 800;
+    font-stretch: 75% 100%;
+  }
+  :root {
+    --band: #2a1614;
+    --crust: #3a221e;
+    --crust-2: #4a2e28;
+    --flour: #f3e9e2;
+    --muted: #b9a59c;
+    --basil: #7fb069;
+    --cheese: #f2c14e;
+    --tomato: #e4572e;
+    --line: rgba(243, 233, 226, 0.12);
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--band); color: var(--flour); }
+  body {
+    font-family: "Open Sans", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    padding: 18px 20px 40px;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 20px; font-weight: 700; margin: 0; }
+  h2 { font-size: 15px; font-weight: 700; margin: 0 0 10px; color: var(--flour); }
+  .num { font-stretch: 75%; font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+  button, select, input {
+    font: inherit;
+    color: var(--flour);
+    background: var(--crust-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 7px 12px;
+  }
+  button { cursor: pointer; font-weight: 600; }
+  button:hover:not(:disabled) { border-color: rgba(243, 233, 226, 0.4); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  .model { margin: 10px 0; }
+  .model > label { display: block; color: var(--muted); margin-bottom: 4px; }
+  .model .row { margin: 0; flex-wrap: nowrap; }
+  .model select { flex: 1; min-width: 0; text-overflow: ellipsis; }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--cheese); outline-offset: 2px; }
+  input[type=number] { width: 84px; }
+  input[type=range] { padding: 0; accent-color: var(--cheese); width: 100%; background: none; border: 0; }
+
+  /* Program monitor: the overlay as the audience sees it, on the band. */
+  header { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+  header .grow { flex: 1; }
+  #runstate { font-weight: 700; }
+  #runstate.on { color: var(--basil); }
+  #runstate.off { color: var(--muted); }
+  #startstop { min-width: 150px; padding: 12px 18px; font-size: 17px; }
+  #startstop.start { background: var(--basil); color: #17240f; border-color: transparent; }
+  #startstop.stop { background: var(--tomato); color: #2a0d05; border-color: transparent; }
+  .monitor {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #000;
+    border: 1px solid var(--line);
+    aspect-ratio: 1920 / 180;
+  }
+  .monitor .band { position: absolute; inset: 0; background: var(--band); }
+  .monitor iframe {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 180px; border: 0;
+    transform-origin: 0 0;
+    background: transparent;
+  }
+  .monitor .tag {
+    position: absolute; right: 10px; top: 8px;
+    font-size: 12px; color: var(--muted);
+  }
+  .alert {
+    margin: 12px 0 0;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    background: rgba(228, 87, 46, 0.16);
+    border: 1px solid rgba(228, 87, 46, 0.6);
+    display: none;
+  }
+  .alert.show { display: block; }
+
+  main { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+  section { background: var(--crust); border-radius: var(--radius); padding: 14px 16px; border: 1px solid var(--line); }
+  section.wide { grid-column: 1 / -1; }
+  .row { display: flex; align-items: center; gap: 10px; margin: 8px 0; flex-wrap: wrap; }
+  .row label { min-width: 120px; color: var(--muted); }
+  .row select { flex: 1; min-width: 0; }
+
+  /* Level meter: green band for speech, the needle shows peak. */
+  .meter { position: relative; height: 18px; border-radius: 9px; background: #1d0f0d; overflow: hidden; flex: 1; }
+  .meter .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, var(--basil) 0 70%, var(--cheese) 70% 88%, var(--tomato) 88%); transition: width 80ms linear; }
+  .meter .peak { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--flour); left: 0; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #5a3f39; vertical-align: middle; }
+  .dot.on { background: var(--basil); }
+
+  /* Spoken language: big segmented control, the most used action. */
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .seg button { padding: 14px 8px; font-size: 16px; line-height: 1.25; }
+  .seg button small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+  .seg button[aria-pressed=true] { background: var(--flour); color: var(--band); border-color: var(--flour); }
+  .seg button[aria-pressed=true] small { color: #6d4f48; }
+
+  .session { padding: 10px 12px; border-radius: 8px; background: var(--crust-2); margin-top: 8px; }
+  .session .when { font-stretch: 75%; color: var(--muted); }
+  .lang { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 7px; border-radius: 6px; border: 1px solid var(--line); }
+
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .actions button { padding: 11px; }
+  button.toggle[aria-pressed=false] { color: var(--muted); }
+
+  .health { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+  .stat { background: var(--crust-2); border-radius: 8px; padding: 10px 12px; }
+  .stat .v { font-size: 26px; font-weight: 700; font-stretch: 75%; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .stat .k { font-size: 13px; color: var(--muted); }
+  .ok { color: var(--basil); }
+  .warn { color: var(--cheese); }
+  .bad { color: var(--tomato); }
+  ul.events { list-style: none; margin: 0; padding: 0; max-height: 210px; overflow: auto; font-size: 13px; }
+  ul.events li { padding: 3px 0; border-bottom: 1px solid var(--line); }
+  ul.events .t { font-stretch: 75%; color: var(--muted); margin-right: 8px; }
+  .workers { font-size: 13px; }
+  .workers div { margin: 3px 0; }
+  details summary { cursor: pointer; color: var(--muted); }
+  #conn { font-size: 13px; }
+
+  @media (max-width: 1100px) {
+    main { grid-template-columns: 1fr; }
+    .health { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (prefers-reduced-motion: reduce) { .meter .fill { transition: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Live subtitles</h1>
+  <span id="runstate" class="off">Stopped</span>
+  <span id="conn" class="muted">Connecting…</span>
+  <span class="grow"></span>
+  <button id="startstop" class="start">Start</button>
+</header>
+
+<div class="monitor" id="monitor">
+  <div class="band"></div>
+  <iframe src="/" title="What the projector shows" id="mon-frame"></iframe>
+  <span class="tag">On screen now</span>
+</div>
+<div class="alert" id="alert"></div>
+
+<main>
+  <section>
+    <h2>Audio input</h2>
+    <div class="row"><label for="device">Device</label><select id="device"></select><button id="refresh" title="Rescan devices">Rescan</button></div>
+    <div class="row"><label for="channel">Channel</label>
+      <select id="channel"><option value="mono">Both, mixed to mono</option><option value="left">Left only</option><option value="right">Right only</option></select></div>
+    <div class="row"><label>Level</label><div class="meter"><div class="fill" id="meter-fill"></div><div class="peak" id="meter-peak"></div></div><span class="num" id="level-db" style="width:64px;text-align:right">-</span></div>
+    <div class="row"><label for="auto-gain">Lift quiet input</label><input type="checkbox" id="auto-gain" style="width:auto"><span class="muted num" id="gain"></span></div>
+    <div class="row"><label>Speech detected</label><span class="dot" id="speech-dot"></span><span class="muted" id="source-info"></span></div>
+    <details>
+      <summary>Play a file instead (test mode)</summary>
+      <div class="row"><input id="file-path" placeholder="/path/to/talk.mp3" style="flex:1"><input id="file-speed" type="number" value="1" step="0.5" min="0.5" max="8" title="Speed"></div>
+      <div class="row"><button id="play-file">Play file</button><button id="use-live">Back to live input</button></div>
+    </details>
+  </section>
+
+  <section>
+    <h2>Spoken language</h2>
+    <div class="seg" id="lang-seg">
+      <button data-lang="en" aria-pressed="false">English<small>Turkish subtitles</small></button>
+      <button data-lang="tr" aria-pressed="false">Turkish<small>English subtitles</small></button>
+      <button data-lang="auto" aria-pressed="false">Detect<small>follows the speaker</small></button>
+    </div>
+    <div class="row"><label for="auto-sched">Follow schedule</label><input type="checkbox" id="auto-sched" style="width:auto"><span class="muted">Sets the language when each session starts. Your change holds until the next session.</span></div>
+    <div class="row"><label for="gender-neutral">Gender-neutral</label><input type="checkbox" id="gender-neutral" style="width:auto"><span class="muted">Turkish has no he/she; English subtitles say "they" unless the speaker names a gender.</span></div>
+    <div class="session" id="cur-session"><span class="muted">No session right now</span></div>
+    <div class="session" id="next-session" style="opacity:.75"></div>
+  </section>
+
+  <section>
+    <h2>On screen</h2>
+    <div class="actions">
+      <button id="visible" class="toggle" aria-pressed="true">Subtitles shown</button>
+      <button id="clear">Clear now</button>
+      <button id="test">Show test text</button>
+      <button id="interim" class="toggle" aria-pressed="true">Live preview text on</button>
+    </div>
+    <div class="row"><label for="font-size">Font size</label><input type="range" id="font-size" min="36" max="80" step="1" style="flex:1"><span class="num" id="font-size-v" style="width:52px"></span></div>
+    <div class="row"><label for="lines">Lines</label><select id="lines" style="flex:0 0 72px"><option>1</option><option>2</option><option>3</option></select></div>
+    <div class="row"><label for="clear-after">Clear after silence</label><input type="number" id="clear-after" min="1" max="120" step="1"><span class="muted">s</span></div>
+    <div class="row"><label for="shadow">Text shadow</label><input type="checkbox" id="shadow" style="width:auto">
+      <label for="offset" style="min-width:auto">Move up/down</label><input type="number" id="offset" min="-90" max="90" step="2"><span class="muted">px</span></div>
+  </section>
+
+  <section class="wide">
+    <h2>Keeping up</h2>
+    <div class="health">
+      <div class="stat"><div class="v" id="h-keep">-</div><div class="k">Pipeline</div></div>
+      <div class="stat"><div class="v num" id="h-first">-</div><div class="k">Delay to first text (median / p95)</div></div>
+      <div class="stat"><div class="v num" id="h-conf">-</div><div class="k">Delay to final text (median / p95)</div></div>
+      <div class="stat"><div class="v num" id="h-asr">-</div><div class="k">Speech recognition per pass</div></div>
+      <div class="stat"><div class="v num" id="h-mt">-</div><div class="k">Translation per clause</div></div>
+      <div class="stat"><div class="v num" id="h-backlog">-</div><div class="k">Audio waiting</div></div>
+    </div>
+    <div class="row workers" id="workers"></div>
+  </section>
+
+  <section>
+    <h2>Recent events</h2>
+    <ul class="events" id="events"></ul>
+  </section>
+
+  <section>
+    <h2>Captions for recordings</h2>
+    <div class="row"><label for="srt-day">Day</label><select id="srt-day"></select></div>
+    <div class="row"><label for="srt-from">From</label><input id="srt-from" value="11:15" size="8"><label for="srt-to" style="min-width:auto">to</label><input id="srt-to" value="11:40" size="8"></div>
+    <div class="row"><label for="srt-text">Text</label><select id="srt-text"><option value="translation">Translation</option><option value="source">What was said</option><option value="both">Both</option></select></div>
+    <div class="row"><label for="srt-offset">Offset</label><input type="number" id="srt-offset" value="0" step="0.5"><span class="muted">s added to every cue</span></div>
+    <div class="row"><button id="srt-go">Download SRT</button></div>
+  </section>
+
+  <section>
+    <h2>Schedule and models</h2>
+    <div class="row"><button id="update-sched">Fetch schedule from the website</button></div>
+    <div class="muted" id="sched-info"></div>
+    <div class="model"><label for="m-asr">Speech model</label>
+      <div class="row"><select id="m-asr"></select><button id="m-asr-go">Switch</button></div></div>
+    <div class="model"><label for="m-mt_en_tr">Translation, English → Turkish</label>
+      <div class="row"><select id="m-mt_en_tr"></select><button id="m-mt_en_tr-go">Switch</button></div></div>
+    <div class="model"><label for="m-mt_tr_en">Translation, Turkish → English</label>
+      <div class="row"><select id="m-mt_tr_en"></select><button id="m-mt_tr_en-go">Switch</button></div></div>
+    <div class="muted" id="m-note">The new model loads while the current one keeps running, then they swap. Subtitles do not pause.</div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let ws, settings = null, devices = [];
+  let delay = 500;
+
+  // Scale the overlay iframe to the monitor width.
+  const mon = $("monitor"), frame = $("mon-frame");
+  const fit = () => { frame.style.transform = `scale(${mon.clientWidth / 1920})`; };
+  new ResizeObserver(fit).observe(mon); fit();
+
+  function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+  function set(values) { send({ cmd: "settings", values }); }
+
+  function connect() {
+    ws = new WebSocket(`ws://${location.host}/ws/control`);
+    ws.onopen = () => { delay = 500; $("conn").textContent = "Connected"; send({ cmd: "models" }); };
+    ws.onclose = () => {
+      $("conn").textContent = "Server not reachable, retrying…";
+      setTimeout(connect, delay); delay = Math.min(delay * 2, 5000);
+    };
+    ws.onmessage = ev => {
+      const m = JSON.parse(ev.data);
+      if (m.type === "status") onStatus(m);
+      else if (m.type === "level") onLevel(m);
+      else if (m.type === "devices") { devices = m.devices; renderDevices(); }
+      else if (m.type === "models") { catalog = m; renderModels(); }
+      else if (m.type === "schedule") { $("sched-info").textContent = (m.msg || "") + ` ${m.sessions.length} sessions in schedule.`; }
+      else if (m.type === "error") addLocalEvent("error", m.msg);
+    };
+  }
+
+  function renderDevices() {
+    const sel = $("device");
+    const current = settings ? settings.device_name : null;
+    sel.innerHTML = "";
+    const def = document.createElement("option");
+    def.value = ""; def.textContent = "System default input";
+    sel.appendChild(def);
+    let found = !current;
+    for (const d of devices) {
+      const o = document.createElement("option");
+      o.value = d.name;
+      o.textContent = `${d.name} (${d.channels} ch${d.default ? ", default" : ""})`;
+      if (d.name === current) { o.selected = true; found = true; }
+      sel.appendChild(o);
+    }
+    if (!found) {
+      const o = document.createElement("option");
+      o.value = current; o.textContent = `${current} (not connected)`; o.selected = true;
+      sel.appendChild(o);
+    }
+  }
+
+  function fmtS(v) { return v == null ? "-" : v.toFixed(1) + " s"; }
+  function fmtPair(a, b) { return a == null ? "-" : `${a.toFixed(1)} / ${b.toFixed(1)} s`; }
+
+  function sessionHtml(s, label) {
+    if (!s) return `<span class="muted">${label}: none</span>`;
+    const lang = s.lang ? s.lang.toUpperCase() : "Detect";
+    const who = s.speaker && s.speaker.length < 60 ? ` with ${escapeHtml(s.speaker)}` : "";
+    return `<div class="when">${label} ${s.start}–${s.end}</div><div><span class="lang">${lang}</span> ${escapeHtml(s.title)}${who}</div>`;
+  }
+  function escapeHtml(t) { return (t || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+  let lastEventsKey = "";
+  function onStatus(st) {
+    const first = settings === null;
+    settings = st.settings;
+    if (first) renderDevices();
+    $("runstate").textContent = st.running ? (st.source === "file" ? "Running (test file)" : "Running") : "Stopped";
+    $("runstate").className = st.running ? "on" : "off";
+    const ss = $("startstop");
+    ss.textContent = st.running ? "Stop" : "Start";
+    ss.className = st.running ? "stop" : "start";
+
+    const alert = $("alert");
+    alert.textContent = st.audio_error || "";
+    alert.classList.toggle("show", !!st.audio_error);
+
+    // Only overwrite inputs the operator is not editing.
+    const active = document.activeElement;
+    const put = (id, val, prop = "value") => { const el = $(id); if (el !== active) el[prop] = val; };
+    put("channel", settings.channel);
+    put("font-size", settings.font_size); $("font-size-v").textContent = settings.font_size + " px";
+    put("lines", String(settings.lines));
+    put("clear-after", settings.clear_after_s);
+    put("shadow", settings.shadow, "checked");
+    put("offset", settings.vertical_offset);
+    put("auto-sched", settings.auto_from_schedule, "checked");
+    put("auto-gain", settings.auto_gain, "checked");
+    put("gender-neutral", settings.gender_neutral, "checked");
+    if ($("device") !== active && $("device").value !== (settings.device_name || "")) renderDevices();
+
+    for (const b of document.querySelectorAll("#lang-seg button")) b.setAttribute("aria-pressed", b.dataset.lang === settings.spoken_language);
+    const vis = $("visible");
+    vis.setAttribute("aria-pressed", settings.visible); vis.textContent = settings.visible ? "Subtitles shown" : "Subtitles hidden";
+    const intr = $("interim");
+    intr.setAttribute("aria-pressed", settings.interim); intr.textContent = settings.interim ? "Live preview text on" : "Final text only";
+
+    $("cur-session").innerHTML = sessionHtml(st.session, "Now");
+    $("next-session").innerHTML = sessionHtml(st.next_session, "Next");
+
+    const k = $("h-keep");
+    const busy = st.workers.some(w => w.state === "loading" || w.state === "restarting");
+    if (busy) { k.textContent = "Loading"; k.className = "v warn"; }
+    else if (st.workers.some(w => w.state === "error")) { k.textContent = "Model error"; k.className = "v bad"; }
+    else if (!st.running) { k.textContent = "Idle"; k.className = "v muted"; }
+    else if (st.keeping_up) { k.textContent = "Keeping up"; k.className = "v ok"; }
+    else { k.textContent = "Behind"; k.className = "v bad"; }
+    $("h-first").textContent = settings.interim ? fmtPair(st.delay_interim_p50, st.delay_interim_p95) : "off";
+    $("h-conf").textContent = fmtPair(st.delay_confirmed_p50, st.delay_confirmed_p95);
+    $("h-asr").textContent = st.asr_ms == null ? "-" : `${st.asr_ms} ms`;
+    $("h-mt").textContent = st.mt_ms == null ? "-" : `${st.mt_ms} ms`;
+    $("h-backlog").textContent = fmtS(st.backlog_s) + (st.skips ? ` (${st.skips} skips)` : "");
+    $("h-backlog").className = "v num " + (st.backlog_s > 2 ? "bad" : "");
+
+    $("workers").innerHTML = st.workers.map(w => {
+      const cls = w.state === "ready" || w.state === "busy" ? "ok" : w.state === "error" ? "bad" : "warn";
+      const err = w.errors.length ? ` <span class="bad">last error ${w.errors[w.errors.length - 1].t}: ${escapeHtml(w.errors[w.errors.length - 1].msg)}</span>` : "";
+      return `<div><b>${escapeHtml(w.label || (w.name === "asr" ? "Speech recognition" : "Translation"))}</b>: <span class="${cls}">${w.state}</span>${w.restarts ? `, ${w.restarts} restarts` : ""}${err}</div>`;
+    }).join("");
+    switching = st.switching || {};
+    renderModels();
+    $("gain").textContent = st.gain_db > 0.5 ? `boost +${st.gain_db.toFixed(0)} dB` : "";
+    $("source-info").textContent = st.source === "file" ? `test file ${st.file || ""} at ${st.file_pos ?? 0} s` : (st.device ? `from ${st.device}` : "");
+
+    const evKey = JSON.stringify(st.events);
+    if (evKey !== lastEventsKey) {
+      lastEventsKey = evKey;
+      $("events").innerHTML = st.events.slice().reverse().map(e =>
+        `<li><span class="t">${e.t}</span><span class="${e.level === "error" ? "bad" : e.level === "warn" ? "warn" : ""}">${escapeHtml(e.msg)}</span></li>`).join("");
+    }
+  }
+
+  function addLocalEvent(level, msg) {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="t">${new Date().toLocaleTimeString()}</span><span class="bad">${escapeHtml(msg)}</span>`;
+    $("events").prepend(li);
+  }
+
+  function onLevel(m) {
+    const pct = db => Math.max(0, Math.min(100, (db + 60) / 60 * 100));
+    $("meter-fill").style.width = pct(m.rms_db) + "%";
+    $("meter-peak").style.left = pct(m.peak_db) + "%";
+    $("level-db").textContent = m.rms_db <= -100 ? "silent" : `${m.rms_db.toFixed(0)} dB`;
+    $("speech-dot").classList.toggle("on", m.speech);
+  }
+
+  // Models
+  // The operator's choice is kept in `pending` so status refreshes (twice a second) never reset it.
+  let catalog = null, switching = {}, builtFor = "";
+  // One speech model; one translation model per direction (the same model may serve both).
+  const KINDS = ["asr", "mt_en_tr", "mt_tr_en"];
+  const pending = { asr: null, mt_en_tr: null, mt_tr_en: null };
+  const asrKey = (model, ctx) => `${model}|${ctx}`;
+  const currentKey = kind => kind === "asr" ? asrKey(settings.asr_model, settings.asr_audio_ctx)
+    : (settings[`mt_model_${kind.slice(3)}`] || settings.mt_model);
+  const isSwitching = kind => switching[kind] || (kind !== "asr" && switching.mt);
+  function buildSelect(sel, options, keyOf) {
+    sel.innerHTML = "";
+    for (const o of options) {
+      const opt = document.createElement("option");
+      opt.value = keyOf(o);
+      opt.textContent = o.available ? o.label : `${o.label} (not downloaded)`;
+      opt.disabled = !o.available;
+      sel.appendChild(opt);
+    }
+  }
+  function renderModels() {
+    if (!catalog || !settings) return;
+    const sig = JSON.stringify(catalog);
+    if (sig !== builtFor) {
+      buildSelect($("m-asr"), catalog.asr, o => asrKey(o.model, o.audio_ctx));
+      buildSelect($("m-mt_en_tr"), catalog.mt, o => o.model);
+      buildSelect($("m-mt_tr_en"), catalog.mt, o => o.model);
+      builtFor = sig;
+    }
+    for (const kind of KINDS) {
+      const sel = $(`m-${kind}`), btn = $(`m-${kind}-go`), cur = currentKey(kind);
+      if (pending[kind] === cur && !isSwitching(kind)) pending[kind] = null;  // switch finished
+      sel.value = pending[kind] || cur;
+      btn.textContent = isSwitching(kind) ? "Loading…" : "Switch";
+      btn.disabled = !!isSwitching(kind) || !pending[kind];
+    }
+    const missing = [...catalog.asr, ...catalog.mt].some(o => !o.available);
+    $("m-note").textContent = "The new model loads while the current one keeps running, then they swap. Subtitles do not pause."
+      + (missing ? " To use a model marked not downloaded, run `uv run live-translate download-models --all` while online." : "");
+  }
+  for (const kind of KINDS) {
+    $(`m-${kind}`).onchange = e => {
+      pending[kind] = e.target.value === currentKey(kind) ? null : e.target.value;
+      renderModels();
+    };
+  }
+  $("m-asr-go").onclick = () => {
+    const [model, audio_ctx] = pending.asr.split("|");
+    send({ cmd: "switch_model", kind: "asr", model, audio_ctx });
+    switching.asr = model; renderModels();
+  };
+  for (const kind of ["mt_en_tr", "mt_tr_en"]) {
+    $(`m-${kind}-go`).onclick = () => {
+      send({ cmd: "switch_model", kind, model: pending[kind] });
+      switching[kind] = pending[kind]; renderModels();
+    };
+  }
+
+  // Controls
+  $("startstop").onclick = () => send({ cmd: settings && $("startstop").textContent === "Stop" ? "stop" : "start" });
+  $("device").onchange = e => set({ device_name: e.target.value || null });
+  $("refresh").onclick = () => send({ cmd: "devices" });
+  $("channel").onchange = e => set({ channel: e.target.value });
+  for (const b of document.querySelectorAll("#lang-seg button")) b.onclick = () => set({ spoken_language: b.dataset.lang });
+  $("auto-sched").onchange = e => set({ auto_from_schedule: e.target.checked });
+  $("auto-gain").onchange = e => set({ auto_gain: e.target.checked });
+  $("gender-neutral").onchange = e => set({ gender_neutral: e.target.checked });
+  $("visible").onclick = () => set({ visible: !settings.visible });
+  $("interim").onclick = () => set({ interim: !settings.interim });
+  $("clear").onclick = () => send({ cmd: "clear" });
+  $("test").onclick = () => send({ cmd: "test" });
+  $("font-size").oninput = e => { $("font-size-v").textContent = e.target.value + " px"; set({ font_size: +e.target.value }); };
+  $("lines").onchange = e => set({ lines: +e.target.value });
+  $("clear-after").onchange = e => set({ clear_after_s: +e.target.value });
+  $("shadow").onchange = e => set({ shadow: e.target.checked });
+  $("offset").onchange = e => set({ vertical_offset: +e.target.value });
+  $("play-file").onclick = () => send({ cmd: "play", path: $("file-path").value.trim(), speed: +$("file-speed").value || 1 });
+  $("use-live").onclick = () => send({ cmd: "live" });
+  $("update-sched").onclick = () => { $("sched-info").textContent = "Fetching…"; send({ cmd: "update_schedule" }); };
+
+  fetch("/api/transcript/days").then(r => r.json()).then(days => {
+    const sel = $("srt-day");
+    const today = new Date().toISOString().slice(0, 10);
+    for (const d of (days.length ? days : [today])) {
+      const o = document.createElement("option"); o.value = o.textContent = d; sel.appendChild(o);
+    }
+    sel.value = days[days.length - 1] || today;
+  });
+  $("srt-go").onclick = () => {
+    const q = new URLSearchParams({ day: $("srt-day").value, start: $("srt-from").value, end: $("srt-to").value, text: $("srt-text").value, offset: $("srt-offset").value || "0" });
+    location.href = "/api/srt?" + q;
+  };
+
+  connect();
+})();
+</script>
+</body>
+</html>
