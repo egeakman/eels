@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Runtime data: settings, transcripts, logs, benchmark audio and results
+var/
+
+.DS_Store
