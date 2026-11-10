@@ -1,0 +1,208 @@
+{
+  "started": "2026-11-09 16:57",
+  "machine": {
+    "chip": "Apple M4",
+    "memory_gb": 16,
+    "gpu_cores": "10",
+    "model": "MacBook Air",
+    "macos": "27.2",
+    "python": "3.13.18",
+    "power": "AC"
+  },
+  "asr": {
+    "turbo-750": {
+      "note": "large-v3-turbo, 15 s encoder window",
+      "spec": {
+        "model": "mlx-community/whisper-large-v3-turbo",
+        "audio_ctx": "750"
+      },
+      "load_s": 0.2,
+      "clips": {
+        "en_pizza_music": {
+          "text": "I would say that I am a musician trapped inside a body of a computer scientist. If you find what I'm doing interesting, please feel free to reach out. You can contact me on LinkedIn. you will also find me on YouTube and on Instagram. I would be happy to say hello. So what you see here, a word cloud. This is a representation a very high level representation of a data set. So at the beginning of this year and later, I'm going to tell a little bit more about that. I gathered a lot of heavy metal music as MIDI files. So I scraped the internet and I found a lot of songs in the heavy metal genre. What you see here is that I also went through the motions assigning sub-genre labels to the MIDI files that I got. You see here a big word means it's very presented. Small word means I don't have that many samples. So you see that I have samples from fresh metal, heavy metal, black metal, death metal, power metal, doom metal, also speed metal, sludge metal, hardcore, post-hardcore and so on and so forth. So quite a lot of material and if I remember the numbers right I have 7000 heavy metal songs. It's a good start and as always when you do deep learning you need a lot of data and I think 7000 samples of heavy metal music are already quite a lot. But you might wonder. Assuming that you have a lot of music for example as MIDI files which is a symbolic representation of songs.",
+          "runs": 60,
+          "asr_ms_mean": 952.3696075334252,
+          "asr_ms_p95": 1159.7251670027617,
+          "step_s": 1.724720784496943,
+          "first_p50": 1.5972153749991094,
+          "first_p95": 3.436753457993518,
+          "final_p50": 3.7102814169995213,
+          "final_p95": 5.947357667006912,
+          "rewrite_rate": 0.061016949152542375,
+          "clauses": 47,
+          "wall_s": 57.78648687498935,
+          "audio_s": 90.0,
+          "wer_vs_ref": 0.018315018315018316,
+          "rss_mb": 1825.0
+        },
+        "en_pycon_shaw": {
+          "text": "And they have different use cases. So for example, if I took this task here, which is to calculate the difference between the number 50 for an array of random numbers. if I split that in half and executed it between two threads in Python 3.12, it would take twice as long. partly because of the gill, actually that's the main reason, but we can't run that fully in parallel on older versions of Python. So, in 3.11, the gill lived in the interpreter, but... There's a lot of caveats to that. So, really, we had one gill per Python process, and the reason you use multiprocessing is to get fully parallel code execution. In 3.12, we had the ability to run multiple interpreters using a new API. And each one had its own gil. So it's the per gil interpreter. This means where previously we can run one thing at a time per process, now in Python 3.12 and 3.13, we can run two things at a time. And the CPUs, the operating system, will figure out which core is available and schedule so they can actually run fully in parallel. So, let's talk about speed for a minute because this is where we're going to get back to our paper analogy.",
+          "runs": 63,
+          "asr_ms_mean": 906.9799166186601,
+          "asr_ms_p95": 1104.818667008658,
+          "step_s": 1.6259509304169721,
+          "first_p50": 1.6623608750051346,
+          "first_p95": 2.7692900419897626,
+          "final_p50": 3.8245805410003513,
+          "final_p95": 5.631509916011595,
+          "rewrite_rate": 0.1434108527131783,
+          "clauses": 35,
+          "wall_s": 57.9685551670118,
+          "audio_s": 90.0,
+          "wer_vs_ref": 0.02702702702702703,
+          "rss_mb": 1827.0
+        },
+        "tr_meetup66": {
+          "text": "Bu, Static Web Cycle Syncli bir seçenek var. Zaten size bir taneyi öğrenen esayen ediyor. Sizin eskişme sahibi diye baktınız ve Amazon eylemli es.com. Tamam, ben bu baktı, bilim ve sıçtınmak için kullanmak istiyorum diye seçiyorum ve benim anada sayfam burada indexleştirebilen olacak. yöven krali etki indizli? bu arada index. ayı",
+          "runs": 24,
+          "asr_ms_mean": 869.4701006673616,
+          "asr_ms_p95": 1024.213458003942,
+          "step_s": 1.4663443297528527,
+          "first_p50": 2.190334624979762,
+          "first_p95": 5.479588916003005,
+          "final_p50": 5.730334624979761,
+          "final_p95": 9.934522000015598,
+          "rewrite_rate": 0.37037037037037035,
+          "clauses": 12,
+          "wall_s": 21.408957292005653,
+          "audio_s": 90.0,
+          "wer_vs_ref": 0.6716417910447762,
+          "rss_mb": 1825.0
+        },
+        "tr_meetup72": {
+          "text": "Hachit. şey yapabiliyorsunuz Python'daki çoğu metot şey. çoğu böyle işte. min'dir, max'dır, sort'dır işte. o tür keywordlerle çalışan fonksiyonlarda diyelim. key diye bir parametre oluyor bu. bu da yapacağım şey birazdan anlatacağıma göre daha karışık. Lambda X X A şeklinde. diyorsunuz ki A'nın mandırsa. bunun isimden değiştiriyor. S1'in A'sıyla. S2'nin A'sını karışır karşılaştır. bana ona göre bir sonuç ver. bunu dediğimiz zaman tabi şu an oldukça çirkin oldu ama. en küçük. kare objesinin kenarının 5 olduğu daha doğrusu kare 5 kenarı 5 olan karenin en küçük kare olduğu sonucuna varabiliyoruz ama. niye böyle bir şey yapmam gereksin benim niye böyle bir ekstra bir fantastik bir tanımlama yazmam gereksin oraya ben objelerin kendi içinde birbirlerine karşılaştırılabilir olmasını istiyorum. o zaman ne yapıyorum? o zaman ne yapıyorum? buradaki comparison metodlarından, Alt 'ı bu arada şunları da çok kısa yazayım. Daha burada birkaç tane daha metot var aslında. Equal, Last dan, Greater dan, Greater or Equal, Less or Equal. Türkçe olarak da eşittir.",
+          "runs": 60,
+          "asr_ms_mean": 905.1227278495693,
+          "asr_ms_p95": 1149.2644170066342,
+          "step_s": 1.4587835660810622,
+          "first_p50": 1.7681579590039327,
+          "first_p95": 4.349833292005004,
+          "final_p50": 3.457638416990754,
+          "final_p95": 7.449833292005003,
+          "rewrite_rate": 0.1822429906542056,
+          "clauses": 33,
+          "wall_s": 55.12573949999933,
+          "audio_s": 90.0,
+          "wer_vs_ref": 0.2185430463576159,
+          "rss_mb": 1828.0
+        }
+      }
+    }
+  },
+  "pipeline": {
+    "turbo-750+opus-mt": {
+      "clips": {
+        "en_pizza_music": {
+          "asr_ms": 763.0,
+          "asr_step_s": 1.15,
+          "mt_ms": 83.0,
+          "delay_interim_p50": 1.03,
+          "delay_interim_p95": 1.35,
+          "delay_confirmed_p50": 2.49,
+          "delay_confirmed_p95": 3.3,
+          "skips": 0,
+          "keeping_up": true,
+          "rss_asr_mb": 1823.0,
+          "rss_mt_mb": 897.0
+        },
+        "en_pycon_shaw": {
+          "asr_ms": 734.0,
+          "asr_step_s": 1.07,
+          "mt_ms": 89.0,
+          "delay_interim_p50": 0.9,
+          "delay_interim_p95": 1.62,
+          "delay_confirmed_p50": 2.23,
+          "delay_confirmed_p95": 4.74,
+          "skips": 0,
+          "keeping_up": true,
+          "rss_asr_mb": 1824.0,
+          "rss_mt_mb": 897.0
+        },
+        "tr_meetup66": {
+          "asr_ms": 689.0,
+          "asr_step_s": 1.32,
+          "mt_ms": 149.0,
+          "delay_interim_p50": 1.05,
+          "delay_interim_p95": 3.49,
+          "delay_confirmed_p50": 4.12,
+          "delay_confirmed_p95": 8.39,
+          "skips": 0,
+          "keeping_up": true,
+          "rss_asr_mb": 1822.0,
+          "rss_mt_mb": 956.0
+        },
+        "tr_meetup72": {
+          "asr_ms": 550.0,
+          "asr_step_s": 0.87,
+          "mt_ms": 95.0,
+          "delay_interim_p50": 0.77,
+          "delay_interim_p95": 1.29,
+          "delay_confirmed_p50": 1.58,
+          "delay_confirmed_p95": 4.45,
+          "skips": 0,
+          "keeping_up": true,
+          "rss_asr_mb": 1825.0,
+          "rss_mt_mb": 956.0
+        }
+      },
+      "soak": null
+    },
+    "turbo-750+tg4b": {
+      "clips": {
+        "en_pizza_music": {
+          "asr_ms": 1504.0,
+          "asr_step_s": 2.76,
+          "mt_ms": 1138.0,
+          "delay_interim_p50": 3.74,
+          "delay_interim_p95": 4.68,
+          "delay_confirmed_p50": 6.96,
+          "delay_confirmed_p95": 8.31,
+          "skips": 0,
+          "keeping_up": true,
+          "rss_asr_mb": 131.0,
+          "rss_mt_mb": 528.0
+        },
+        "en_pycon_shaw": {
+          "asr_ms": 1292.0,
+          "asr_step_s": 2.47,
+          "mt_ms": 1130.0,
+          "delay_interim_p50": 2.34,
+          "delay_interim_p95": 3.84,
+          "delay_confirmed_p50": 5.43,
+          "delay_confirmed_p95": 9.38,
+          "skips": 0,
+          "keeping_up": true,
+          "rss_asr_mb": 133.0,
+          "rss_mt_mb": 529.0
+        },
+        "tr_meetup66": {
+          "asr_ms": 977.0,
+          "asr_step_s": 1.65,
+          "mt_ms": 826.0,
+          "delay_interim_p50": 2.03,
+          "delay_interim_p95": 3.28,
+          "delay_confirmed_p50": 5.52,
+          "delay_confirmed_p95": 10.54,
+          "skips": 0,
+          "keeping_up": true,
+          "rss_asr_mb": 128.0,
+          "rss_mt_mb": 529.0
+        },
+        "tr_meetup72": {
+          "asr_ms": 850.0,
+          "asr_step_s": 1.68,
+          "mt_ms": 904.0,
+          "delay_interim_p50": 1.44,
+          "delay_interim_p95": 2.84,
+          "delay_confirmed_p50": 3.73,
+          "delay_confirmed_p95": 7.96,
+          "skips": 0,
+          "keeping_up": true,
+          "rss_asr_mb": 74.0,
+          "rss_mt_mb": 463.0
+        }
+      },
+      "soak": null
+    }
+  }
+}

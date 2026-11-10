@@ -1,0 +1,71 @@
+{
+  "started": "2026-11-09 17:14",
+  "machine": {
+    "chip": "Apple M4",
+    "memory_gb": 16,
+    "gpu_cores": "10",
+    "model": "MacBook Air",
+    "macos": "27.2",
+    "python": "3.13.18",
+    "power": "AC"
+  },
+  "pipeline": {
+    "turbo-750+tg4b": {
+      "clips": {
+        "en_pizza_music": {
+          "asr_ms": 992.0,
+          "asr_step_s": 1.85,
+          "mt_ms": 888.0,
+          "delay_interim_p50": 2.12,
+          "delay_interim_p95": 2.92,
+          "delay_confirmed_p50": 3.64,
+          "delay_confirmed_p95": 6.64,
+          "skips": 0,
+          "keeping_up": true,
+          "rss_asr_mb": 2260,
+          "rss_mt_mb": 2727
+        },
+        "en_pycon_shaw": {
+          "asr_ms": 1530.0,
+          "asr_step_s": 2.79,
+          "mt_ms": 1101.0,
+          "delay_interim_p50": 2.83,
+          "delay_interim_p95": 5.99,
+          "delay_confirmed_p50": 6.0,
+          "delay_confirmed_p95": 10.46,
+          "skips": 0,
+          "keeping_up": true,
+          "rss_asr_mb": 2262,
+          "rss_mt_mb": 2722
+        },
+        "tr_meetup66": {
+          "asr_ms": 815.0,
+          "asr_step_s": 1.35,
+          "mt_ms": 634.0,
+          "delay_interim_p50": 1.75,
+          "delay_interim_p95": 2.26,
+          "delay_confirmed_p50": 5.01,
+          "delay_confirmed_p95": 9.18,
+          "skips": 0,
+          "keeping_up": true,
+          "rss_asr_mb": 2260,
+          "rss_mt_mb": 2722
+        },
+        "tr_meetup72": {
+          "asr_ms": 974.0,
+          "asr_step_s": 2.02,
+          "mt_ms": 942.0,
+          "delay_interim_p50": 1.58,
+          "delay_interim_p95": 3.25,
+          "delay_confirmed_p50": 3.7,
+          "delay_confirmed_p95": 7.13,
+          "skips": 0,
+          "keeping_up": true,
+          "rss_asr_mb": 2262,
+          "rss_mt_mb": 2723
+        }
+      },
+      "soak": null
+    }
+  }
+}

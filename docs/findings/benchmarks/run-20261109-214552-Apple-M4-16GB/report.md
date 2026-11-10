@@ -1,0 +1,388 @@
+# Real talks by Turkish speakers, scored against human captions
+
+MacBook Air (Apple M4, 16 GB). WER = word error rate against the human captions (lower is better); live = the app's streaming recognition, offline = the same model on 28 s windows. A few words at the edges of each excerpt may not line up with the captions (about 1-2 points).
+
+| Speech model | Talk | WER live | WER offline | ms per pass |
+|---|---|---|---|---|
+
+## Subtitles: what was heard live (best speech model) and each translation
+
+### Ayse Bilge Gunduz, WomenTech: English by a Turkey-based developer
+
+Video: https://www.youtube.com/watch?v=Q9pIcLXcjMU&t=60s
+
+- [1:00] **We use Python for the same language.**
+  - `opus-mt`: Python'u aynı dil için kullanıyoruz.
+  - `tg4b`: Biz Python'ı aynı dili için kullanıyoruz.
+- [1:02] **So why Python at the beginning? Because it's relatively easy to learn and fast to write a code.**
+  - `opus-mt`: Peki neden Python başlangıçta? Çünkü bir kod yazmak nispeten kolay ve hızlıdır.
+  - `tg4b`: Bu durumda Python'un en başından tercih edilmesinin nedeni, öğrenilmesi ve kod yazılması konusunda nispeten kolay olmasıdır.
+- [1:09] **It's like writing it in English, it seems to me at least, and very intuitive And when we compare with MATLAB and R,**
+  - `opus-mt`: İngilizce yazmak gibi, en azından bana öyle geliyor, ve çok sezgisel Ve MATLAB ve R ile karşılaştırdığımızda,
+  - `tg4b`: İngilizce yazmak gibi, en azından bana göre, ve oldukça sezgisel. Ayrıca, MATLAB ve R ile karşılaştırdığımızda
+- [1:18] **it's versatile and of course, when we compare with see it's verse performance.**
+  - `opus-mt`: çok yönlüdür ve tabii ki, gördüğümüzle karşılaştırdığımızda, ayet performansıdır.
+  - `tg4b`: Çok yönlüdür ve tabii ki, performansını diğerlerine kıyasla değerlendirdiğimizde.
+- [1:27] **So, why Python trick?**
+  - `opus-mt`: Peki neden Python hilesi?
+  - `tg4b`: Peki, neden Python'u tercih etmek?
+- [1:31] **Because today I will explain everything in Python tree because Python 2 is not supported anymore.**
+  - `opus-mt`: Çünkü bugün Python ağacındaki her şeyi açıklayacağım çünkü Python 2 artık desteklenmiyor.
+  - `tg4b`: Bugün, Python ağının tüm detaylarını açıklayacağım, çünkü Python 2 artık desteklenmiyor.
+- [1:38] **So, if you're using, if you're still using Python, 2, I highly recommend to Python 3 because it's easy So,**
+  - `opus-mt`: Yani, eğer kullanıyorsanız, hala Python kullanıyorsanız, 2, Python 3'e şiddetle tavsiye ederim, çünkü bu kolay So,
+  - `tg4b`: Bu durumda, eğer hala Python 2 kullanıyorsanız, kesinlikle Python 3'ü tavsiye ederim çünkü kullanımı çok kolaydır
+- [1:49] **I'd like to start first with NumPy and NumPy is a fundamental package scientific computing in Python, We can easily**
+  - `opus-mt`: İlk olarak NumPy ve NumPy ile başlamak istiyorum Python'da temel bir paket bilimsel bilgi işlemdir, kolayca yapabiliriz
+  - `tg4b`: Öncelikle NumPy ile başlamak istiyorum. NumPy, Python'da temel bir bilimsel hesaplama pakettir. Bunu kolayca
+- [2:02] **import NumPy with an alias as we can see it in here And in the first line and it's an n-dimensional array object in essential**
+  - `opus-mt`: NumPy'i burada ve ilk satırda görebildiğimiz gibi bir takma adla içe aktarın ve temel olarak n boyutlu bir dizi nesnesidir
+  - `tg4b`: NumPy'i, burada görüldüğü gibi bir takma adla içe aktarır. Ayrıca, ilk satırda, temel olarak n-boyutlu bir dizi nesnesidir
+- [2:15] **core.**
+  - `opus-mt`: çekirdek.
+  - `tg4b`: çekirdek
+- [2:16] **So we can easily assign a number in any type.**
+  - `opus-mt`: Böylece herhangi bir türdeki bir sayıyı kolayca atayabiliriz.
+  - `tg4b`: Bu nedenle, herhangi bir türde kolayca bir sayı atayabiliriz.
+- [2:21] **It can be integer,**
+  - `opus-mt`: Tamsayı olabilir,
+  - `tg4b`: Bütünde, tam sayı olabilir
+- [2:22] **it can be float And there's many functions in NumPy like in math library in Python.**
+  - `opus-mt`: float olabilir Ve NumPy'de Python'daki matematik kütüphanesinde olduğu gibi birçok fonksiyon var.
+  - `tg4b`: Yüzer şekilde ifade edilebilir. Ayrıca, NumPy'de Python'daki math kütüphanesindeki gibi birçok fonksiyon bulunmaktadır.
+- [2:32] **Like there's an exponential function, absolute function as we can see it in here.**
+  - `opus-mt`: Üstel bir fonksiyon olduğu gibi, burada da görebildiğimiz gibi mutlak fonksiyon.
+  - `tg4b`: Gibi, burada görülebilecek bir üstel fonksiyon ve mutlak fonksiyon olduğunu görebiliriz.
+- [2:37] **We can easily read and with NP.py, NP.e,**
+  - `opus-mt`: Kolayca okuyabilir ve NP.py, NP.e,
+  - `tg4b`: Kolayca okuyabilir ve NP.py, NP.e ile
+- [2:41] **e number and pi number and here are the outputs for our inputs And okay**
+  - `opus-mt`: e numarası ve pi numarası ve burada girişlerimiz için çıktılar Ve tamam
+  - `tg4b`: Sayılar ve pi sayısı, ve bu, girdilerimiz için elde edilen sonuçlardır. Ve tamam
+- [2:51] **We told that it's an n-dimensional array object for NumPy, right?**
+  - `opus-mt`: NumPy için n boyutlu bir dizi nesnesi olduğunu söyledik, değil mi?
+  - `tg4b`: Biz, bunun NumPy için n-boyutlu bir dizi nesne olduğunu söyledik, değil mi?
+- [2:56] **So it's so easy to use with especially with an array manipulation things when we would like to do like we can define an array easily**
+  - `opus-mt`: Bu yüzden, özellikle bir dizi manipülasyonu ile kullanımı çok kolaydır, örneğin bir diziyi kolayca tanımlayabiliriz
+  - `tg4b`: Bu, özellikle dizi manipülasyonları gibi işlemler yaparken, istediğimiz şekilde çok kolay kullanılabilen bir sistemdir
+- [3:07] **we can define a data type it is referred to data type and we can use print function to print the array itself easily like in the output we can**
+  - `opus-mt`: Veri türüne yönlendirildiği bir veri türünü tanımlayabiliriz ve diziyi kolayca yazdırabilmek için baskı işlevini kullanabiliriz
+  - `tg4b`: Verilen bir veri türünü tanımlayabiliriz ve bu veri türünü, örneğin çıktıda, dizi üzerinde kolayca yazdırmak için "print" fonksiyonunu kullanabiliriz
+- [3:19] **I hope you can see it in here And we can ask to see the dimension of the array itself it is one as we can see it in**
+  - `opus-mt`: Umarım burada da görebilirsiniz ve dizinin boyutunu görmek isteyebiliriz, bu da bizim görebildiğimiz gibi birdir
+  - `tg4b`: Umarım burada bunu görebilirsiniz. Ayrıca, dizinin kendinin boyutunu görme fırsatı bulabiliriz, çünkü bu bir olduğunu görebiliyoruz
+- [3:31] **here and we can easily get the shape which is for you can see about like there's a four item in our array**
+  - `opus-mt`: burada ve kolayca bizim dizide dört öğe var gibi görebilirsiniz için olan şekli alabilirsiniz
+  - `tg4b`: Burada ve kolayca sizin için uygun olan şekli elde edebiliriz. Ayrıca, dizimizde dört eleman olduğunu görebilirsiniz
+- [3:43] **and we can ask data type as well which is a float.**
+  - `opus-mt`: ve veri türünü de sorabiliriz, hangisi bir float.
+  - `tg4b`: ve ayrıca, veri türünü de sorabiliriz, bu da bir ondalık sayı (float) şeklinde olacaktır.
+- [3:49] **So as I told you before it's an array object if it's one dimensional we can easily call it as vector.**
+  - `opus-mt`: Daha önce de söylediğim gibi, bir dizi nesnesi, eğer tek boyutluysa, vektör olarak kolayca adlandırabiliriz.
+  - `tg4b`: Önce size söylediğim gibi, bu bir dizi nesnesidir. Eğer tek boyutlu ise, bunu kolayca bir vektör olarak adlandırabiliriz.
+- [3:57] **So if we would like to some actions over our array one dimensional area or vector,**
+  - `opus-mt`: Eğer dizimizin bir boyutsal alanı veya vektörü üzerinde bazı eylemler yapmak istersek,
+  - `tg4b`: Eğer, bir boyutlu dizi veya vektör üzerinde bazı eylemler yapmak istiyorsak,
+- [4:05] **whatever you call it is so easy So I create a figure in here to show**
+  - `opus-mt`: Her ne derseniz deyin, çok kolay. Bu yüzden burada bir figür oluşturuyorum
+  - `tg4b`: Ne şekilde adlandırdığınız da oldukça kolay. Bu yüzden, burada bir örnek oluşturuyorum, göstermek için
+- [4:18] **directly writing A we say I mean this is an we call it a like with it in here**
+  - `opus-mt`: doğrudan A'yı yazıyoruz, demek istediğim, burada buna benzer diyoruz
+  - `tg4b`: Doğrudan yazmak, yani, ben demek istiyorum ki bu, biz buna "gibi" diyoruz, yani burada
+- [4:28] **so I'm calling as a or we can write a and brackets and colon in the middle it means that whole items in the array**
+  - `opus-mt`: Yani ben a olarak arıyorum ya da a ve parantez ve kolon yazabiliriz, bu da dizideki tüm öğelerin
+  - `tg4b`: Bu yüzden, ya ben arıyorum ya da biz birlikte yazabiliriz. Ayrıca, parantez ve noktalı işareti ortada, bu da dizideki tüm öğeleri ifade eder
+- [4:40] **and we can if you would like to specific indices in the array we can easily write the in this number like we did in different languages programming languages so**
+  - `opus-mt`: ve dizideki belirli endeksleri isterseniz, bu sayıyı farklı dillerde programlama dillerinde yaptığımız gibi kolayca yazabiliriz
+  - `tg4b`: Ve eğer isterseniz, dizideki belirli indeksleri kolayca belirleyebiliriz. Bunu farklı programlama dillerinde yaptığımız gibi, bu şekilde
+- [4:52] **this is the zero this is one this is two three and four if you write one then we can reach the two**
+  - `opus-mt`: Bu sıfır, bu bir, bu iki üç ve dört eğer bir yazarsanız o zaman ikiye ulaşabiliriz
+  - `tg4b`: Bu sıfır. Bu bir. Bu iki. Üç ve dört. Eğer "bir" yazarsanız, biz "iki"ye ulaşabiliriz
+- [5:01] **so we can ask for example like in here between one and third**
+  - `opus-mt`: Örneğin, burada bir ile üçüncü arasında olduğu gibi sorabiliriz
+  - `tg4b`: Bu nedenle, örneğin burada, bir ile üç arasındaki aralığı sorabiliriz
+
+### Gonul Ayci, PyCon DE lightning talk: English by a Turkey-based developer
+
+Video: https://www.youtube.com/watch?v=ZhN1s9sVUWw&t=0s
+
+- [0:03] **Thank you I'm Gönül and this is Turkey We will organize our first PyCon Turkey conference.**
+  - `opus-mt`: Teşekkür ederim ben Gönül ve burası Türkiye İlk PyCon Türkiye konferansımızı düzenleyeceğiz.
+  - `tg4b`: Teşekkür ederim, ben Gönül ve bu Türkiye. İlk PyCon Türkiye konferansımızı düzenleyeceğiz.
+- [0:12] **And it's really...**
+  - `opus-mt`: Ve bu gerçekten...
+  - `tg4b`: Ve aslında...
+- [0:17] **awesome.**
+  - `opus-mt`: Harika.
+  - `tg4b`: Harika.
+- [0:18] **Thank you.**
+  - `opus-mt`: Teşekkür ederim.
+  - `tg4b`: Teşekkür ederim.
+- [0:21] **It will be held in Istanbul on 2nd and 3rd of May next year.**
+  - `opus-mt`: Gelecek yıl 2 ve 3 Mayıs'ta İstanbul'da düzenlenecek.
+  - `tg4b`: 2. ve 3 Mayıs’taki etkinlik İstanbul’da düzenlenecektir.
+- [0:27] **And we have a plan to open our call for papers on late November of this year.**
+  - `opus-mt`: Ve bu yılın Kasım ayı sonlarında gazete çağrımızı açmak için bir planımız var.
+  - `tg4b`: Ve, bu yıl son Kasım ayında, makale çağrımızı başlatma planımız bulunmaktadır.
+- [0:34] **And if you are interested,**
+  - `opus-mt`: Ve eğer ilgilenirseniz,
+  - `tg4b`: Eğer ilginiz varsa,
+- [0:36] **this is our website and you can subscribe our newsletter And talks will be in English but maybe as well as in Turkish.**
+  - `opus-mt`: Bu bizim web sitesi ve bizim haber bülteni abone olabilir ve görüşmeler İngilizce ama belki de Türkçe olacak.
+  - `tg4b`: Bu, bizim web sitemizdir ve bültenimize abone olabilirsiniz. Konuşmalar İngilizce olarak yapılacaktır, ancak gerekirse Türkçe de olabilir.
+- [0:49] **I want to mention a little bit about our Python community in Istanbul.**
+  - `opus-mt`: İstanbul'daki Python topluluğumuzdan biraz bahsetmek istiyorum.
+  - `tg4b`: İstanbul'daki Python topluluğumuz hakkında kısa bir not vermek istiyorum.
+- [0:54] **We have a huge community.**
+  - `opus-mt`: Büyük bir topluluğumuz var.
+  - `tg4b`: Büyük bir topluluğumuz var.
+- [0:58] **We have more than 9,000 people on our meetup page We will organize our night weekly meetups next week.**
+  - `opus-mt`: Toplantı sayfamızda 9000'den fazla kişi var Haftaya haftalık toplantılarımızı organize edeceğiz.
+  - `tg4b`: Sayfamızda 9.000'den fazla kişi bulunmaktadır. Önümüzdeki hafta, haftalık buluşmalarımızı düzenleyeceğiz.
+- [1:11] **And we have a Django Girls community since 2015 and we have a hackathon.**
+  - `opus-mt`: Ve 2015'ten beri Django Girls topluluğu var ve bir hackathon'umuz var.
+  - `tg4b`: Biz 2015'ten beri Django Girls topluluğuna sahibiz ve ayrıca bir hackathon düzenliyoruz.
+- [1:19] **Last year.**
+  - `opus-mt`: Geçen yıl.
+  - `tg4b`: Geçen yıl.
+- [1:19] **And these are pictures from our weekly meetups.**
+  - `opus-mt`: Bunlar da haftalık buluşmalarımızdan fotoğraflar.
+  - `tg4b`: Ve bunlar, haftalık buluşmalarımızdan kareler.
+- [1:27] **These are from Django Girls events and hackathons That's all Yeah, if you're interested, welcome to PyCon Turkey next year on May 2nd and July.**
+  - `opus-mt`: Bunlar Django Girls etkinlikleri ve hackathons Hepsi Evet, ilgileniyorsanız, gelecek yıl 2 Mayıs ve Temmuz'da PyCon Türkiye'ye hoş geldiniz.
+  - `tg4b`: Bu, Django Girls etkinliklerinden ve hackathonlardan. İşte, tamam. Evet, eğer ilginiz varsa, 2 Mayıs ve Temmuz'da gerçekleşecek PyCon Türkiye'ye hoş geldiniz.
+
+### Python Saati #85 (pyistanbul), from 18:00: Turkish tech talk
+
+Video: https://www.youtube.com/watch?v=UVrpwJ2jhZU&t=1080s
+
+- [18:00] **Kurşun silindir ile sarıyorum Buna yukarıdan bir yoğun ışık gönderince bunu belirli bir sıcaklık ve basınca çıkarabilince zincirleme reaksiyon doğuyor.**
+  - `opus-mt`: I wrap it with a lead cylinder. When you send a heavy light to this from above, when you can take it out at a certain temperature and pressure, there's a chain reaction.
+  - `tg4b`: I’m coating it with lead cylinders. When I send a strong light from above, this causes a chain reaction, allowing me to extract a specific temperature and pressure.
+- [18:10] **450 gram urayim çekirdeği artık kendisi o zincirleme reaksiyonu sürdürebilir hale geliyor.**
+  - `opus-mt`: The 450 grams of urayim core is now itself able to sustain that chain reaction.
+  - `tg4b`: 450 grams of urayim seeds are now capable of sustaining a chain reaction themselves.
+- [18:16] **Ben istediğim süre boyunca ama yine yaptığım şey bundan ürettiğim sıcaklıkla çark çevirmek dolayısıyla enerji kaynaklarımız değişse de kullandığımız alet edevat o kadar değişmiyor insanlık olarak.**
+  - `opus-mt`: I've been doing it for as long as I want, but again, what I've been doing is turning wheels with the heat I've been producing from it, so our energy sources have changed, but the tools we've been using don't change that much as humanity.
+  - `tg4b`: I want to continue doing this for as long as I can, but because I’m constantly generating this kind of heat through what I do, even if our energy sources change, the tools and equipment we use don’t change much as a species.
+- [18:29] **Şimdi geriye doğru gidersek biraz önce machine ile makinayla aracı tanımlamıştık makine birden fazla parçadan oluşuyor ve bir mekanik güç kullanıyordu ya aslında alet**
+  - `opus-mt`: Now, if we go back, we've just described the machine and the machine and the vehicle, the machine is made up of multiple parts and it's using a mechanical force, you know, the tool
+  - `tg4b`: Let's go back and examine what we've already discussed – we were talking about a machine, which is made up of multiple parts and uses mechanical power. Essentially, it’s a tool
+- [18:42] **araç dediğimiz şey ona çok benziyor.**
+  - `opus-mt`: What we call a vehicle is very similar to it.
+  - `tg4b`: That’s very similar to it.
+- [18:44] **yani pensede de kullandığım başka bir mekanik güç kaynağı elim.**
+  - `opus-mt`: So another mechanical power source I use on the pliers is my hand.
+  - `tg4b`: Basically, the other mechanical power source I use, is also in my hand.
+- [18:48] **tornavida da kullandığım başka bir güç kaynağı elim Araçta elde tutulan yani alet edevat dediğimiz şey de tool da elde tutulan denmesinin nedeni aslında mekanik gücü ben elimle sağlıyorum.**
+  - `opus-mt`: Another power source that I use in the screwdriver is my hand held in the vehicle, so what we call tools are also called hand held because I actually provide the mechanical power.
+  - `tg4b`: The reason I use a different power source with my screwdriver – the “tool-in-hand” method – is simply that I’m providing the mechanical force myself.
+- [18:58] **Dolayısıyla aslında baktığımızda makine ile araç kavramı birbirine çok yakın bir yerde duruyor.**
+  - `opus-mt`: So in fact, when we look at it, the concept of the machine and the vehicle stands very close to each other.
+  - `tg4b`: Therefore, when we actually look at it, the concepts of “machine” and “vehicle” are very closely related.
+- [19:06] **Yani bir tanesinin birden fazla parçası var tanım itibariyle Birbirine çok yakın yerlerde duruyorlar.**
+  - `opus-mt`: So there's more than one of them, and by definition, they're standing very close to each other.
+  - `tg4b`: Basically, these items are designed to be used in multiples; they’re meant to be used in sets or multiple pieces at a time.
+- [19:11] **Şimdi**
+  - `opus-mt`: Now
+  - `tg4b`: Now
+- [19:13] **Bu iki tanımı birbirinin üzerine koyarsak herhangi bir bilgisayar, herhangi bir makine, bir server, laptop, tablet, akıllı telefon, web kamerası,**
+  - `opus-mt`: Put these two definitions above each other, any computer, any machine, a server, a laptop, a tablet, a smartphone, a webcam,
+  - `tg4b`: If we combine these two definitions, any computer, any machine, a server, laptop, tablet, smartphone, web camera,
+- [19:22] **ne bileyim içinde herhangi elektronik bir şey çalışan bir cihaz aslında totalde bir araçtan ibaret.**
+  - `opus-mt`: I don't know, a device that runs anything electronic in it is actually a total tool.
+  - `tg4b`: I don't know, really. Basically, any device that uses electronics is just a form of transportation.
+- [19:30] **güç kaynağı başka bir şey parça birden fazla parçadan oluşabilir.**
+  - `opus-mt`: The power supply is something else that can be made up of more than one part of the piece.
+  - `tg4b`: A power source can consist of multiple parts, essentially being a collection of various components.
+- [19:34] **altında yatan başka teknolojilerin üzerine konularak yapılmış.**
+  - `opus-mt`: It's built on the underlying technologies.
+  - `tg4b`: Created by building upon existing technologies and platforms.
+- [19:40] **Bunların hepsi birer araç makine dediğim bir şey aslında çok özüm de belli bir amaca yönelik bir güç kaynağı olan bir araçtan ibaret bir tool'dan ibaret.**
+  - `opus-mt`: All of this is a tool machine, something I call a tool machine, which is actually a tool that is a power source for a particular purpose.
+  - `tg4b`: This is essentially about tools – things that are, in themselves, merely tools, but which also function as a focused source of power, directed towards a specific goal.
+- [19:51] **biz makineler ile yarışmak zorunda değiliz çünkü makineler birer araç.**
+  - `opus-mt`: We don't have to compete with machines because machines are tools.
+  - `tg4b`: We don’t need to compete with machines, because machines are simply tools.
+- [19:58] **tornavida ile yarışmıyorum pense ile yarışmıyorum bilgisayarımla da yarışmıyorum işletim sistemi ile de yarışmıyorum içinde kullandığım benim ürettiğim algoritma ile de yarışmıyorum daha doğrusu yarışmak zorunda değilim**
+  - `opus-mt`: I'm not competing with a screwdriver, I'm not competing with a pliers, I'm not competing with my computer, I'm not competing with the operating system, I'm not competing with the algorithm I'm using, I don't have to compete
+  - `tg4b`: I’m not competing with a screwdriver, I’m not competing with pliers, and I’m not competing with my computer, or even with its operating system. In fact, I don’t need to compete – I don’t *have* to compete
+- [20:09] **beni yenebilir mi lisanen doğru bir soru değil tornavida zaten beni yenmeye çalışmıyor falanca segmentasyonu algoritması beni yenmeye çalışmıyor.**
+  - `opus-mt`: It's not the right question to be able to beat me, but the screwdriver isn't trying to beat me anyway, and the phalanx segmentation algorithm isn't trying to beat me.
+  - `tg4b`: Whether I can be defeated by you is not an accurate question. In fact, the segmentation algorithm isn't even trying to defeat me.
+- [20:20] **Reinforcement Learning'de yazılmış bir şey beni yenmeye çalışmıyor.**
+  - `opus-mt`: Something written in Reinforcement Learning is not trying to beat me.
+  - `tg4b`: In Reinforcement Learning, something I’ve written isn’t trying to beat me.
+- [20:25] **Benim onunla yarışmama gerek yok aslında.**
+  - `opus-mt`: I don't really have to compete with them.
+  - `tg4b`: I don’t actually need to compete with them.
+- [20:28] **Şimdi birkaç tane hani ben şeyi birazcık düşündüm.**
+  - `opus-mt`: Now a couple of them, I thought about the thing a little bit.
+  - `tg4b`: Now, I’ve been thinking about a few things, you know?
+- [20:32] **oradan buraya geliyorum.**
+  - `opus-mt`: I come from there.
+  - `tg4b`: I’m coming from there and going to here.
+- [20:34] **Bizim kafamızdaki bu işte humanoid ve insanları saldıracak robot imgesinin kaynağı nedir?**
+  - `opus-mt`: What is the source of the image of a robot that will attack humanoids and humans in this business in our minds?
+  - `tg4b`: What is the source of the image in our minds – the idea of a robot, designed to resemble a human and attack people?
+- [20:40] **Aslında oralara bakmak lazım.**
+  - `opus-mt`: Actually, I need to look there.
+  - `tg4b`: It would be a good idea to look there.
+- [20:41] **Bir tanesi Terminator filmi Bir tanesi A Space Odyssey.**
+  - `opus-mt`: One is a Terminator movie, and one is a Space Odyssey.
+  - `tg4b`: One is the film *Terminator*, and the other is *2001: A Space Odyssey*.
+- [20:47] **Bir uzay, operası filmin içineydi Seyahati bir şey.**
+  - `opus-mt`: A space, opera was in the film Their journey is something.
+  - `tg4b`: There was a scene, a dramatic one, within the space of an opera film. Their journey was significant.
+- [20:53] **Bir espresso Odyssey.**
+  - `opus-mt`: An espresso Odyssey.
+  - `tg4b`: An espresso journey.
+- [20:56] **Orada bilgisayar camlanıyordu.**
+  - `opus-mt`: There was a computer glazing.
+  - `tg4b`: The computer screen was flickering.
+- [20:58] **HAL 9000 diye bir bilgisayar Uzay gemisinde adamı içeriye almıyordu.**
+  - `opus-mt`: A computer called HAL 9000 wasn't letting the man in on a spaceship.
+  - `tg4b`: There was a computer called HAL 9000 that wasn't allowing a man to board the spaceship.
+- [21:03] **Böyle birkaç tane kültürde yer etmiş Westworld.**
+  - `opus-mt`: Westworld has been featured in several such cultures.
+  - `tg4b`: Something like this, existing in cultures like these.
+- [21:08] **Ben izlemedim ama birazcık görüyorum.**
+  - `opus-mt`: I haven't seen it, but I see it a little bit.
+  - `tg4b`: I haven't watched it, but I’ve seen a little bit.
+- [21:10] **Evet Westworld Kültürde yer etmiş birkaç mihenk taşı var.**
+  - `opus-mt`: Yes, there are a few cornerstones in Westworld Culture.
+  - `tg4b`: Yes, *Westworld* has established itself as a significant cultural landmark.
+- [21:14] **İnsanların kafasında yapay zeka ve makineler deyince bunlar canlanıyor.**
+  - `opus-mt`: When you say artificial intelligence and machines in people's minds, they come alive.
+  - `tg4b`: When people think about artificial intelligence and machines, these images come to mind.
+- [21:19] **Mesela bu sektörle hiç alakası olmayan arkadaşlarım bile yaşlı Matrix,**
+  - `opus-mt`: For example, even my friends who have nothing to do with this industry, the old Matrix,
+  - `tg4b`: For example, even my friends who have absolutely no connection to this industry are talking about “old Matrix.”
+- [21:24] **geleceğiz oraya şey diyorlar ya işte makineler işte bilinçlenip bizi yenecek miyiyor.**
+  - `opus-mt`: We'll come there, they call it, you know, the machines, they're conscious and they're gonna beat us.
+  - `tg4b`: They’re saying that it’s coming there… they’re talking about machines, and whether they’re going to become so intelligent that they’ll defeat us.
+- [21:31] **Makine bilinçli zaten yani kendi bilinçleri var benim beynim gibi onların da kendimin itaat ettiği bir akış var benim beynim zaten nöronların toplamından ibaret bir şey onlar da kendi transistörleri**
+  - `opus-mt`: The machine is conscious anyway, so they have their own consciousness, like my brain, they have a flow that I myself obey, my brain is already a collection of neurons, and they are their own transistors
+  - `tg4b`: “They’re already conscious, you see – they have their own consciousness, just like my brain. They have a flow, a way of operating that’s dictated by their own transistors.”
+- [21:44] **ne buyuruyorsa o tarafta akıyorlar aslında.**
+  - `opus-mt`: Whatever they say, they're actually flowing on that side.
+  - `tg4b`: They’re really just following whatever direction they’re told to.
+- [21:46] **makineler bilinçler insanı yenecek mi?**
+  - `opus-mt`: Will machines defeat consciousness?
+  - `tg4b`: Will machines be able to defeat humans?
+- [21:48] **birkaç tane şey var**
+  - `opus-mt`: There are a few things
+  - `tg4b`: There are a few things
+- [21:50] **şimdi bilim kubuya bakmak bu taraflarda iyi bir şey çünkü milyonlarca bilim kurgu hikayesi yazılıyor.**
+  - `opus-mt`: Now looking at the science cube is a good thing on these sides because there are millions of science fiction stories written.
+  - `tg4b`: Right now, looking at Cube is a really good thing in this area because millions of science fiction stories are being written.
+
+### Python Saati #102 (pyistanbul), Celery: regular Turkish tech presentation
+
+Video: https://www.youtube.com/watch?v=dBY1f3tj3mM&t=0s
+
+- [0:00] **Dim.**
+  - `opus-mt`: Dim.
+  - `tg4b`: Sunday
+- [0:01] **Şimdi öncelikle bir ekranımı paylaşayım.**
+  - `opus-mt`: Now let me share a screen first.
+  - `tg4b`: Now, first, let me share a screenshot.
+- [0:05] **Bakalım onu becerebilecek miyiz?**
+  - `opus-mt`: Let's see if we can do it.
+  - `tg4b`: Let's see if we can manage it.
+- [0:09] **Evet.**
+  - `opus-mt`: Yeah.
+  - `tg4b`: Yes.
+- [0:12] **Tamamdır.**
+  - `opus-mt`: Done.
+  - `tg4b`: Okay.
+- [0:15] **Sanıyorum ekran geliyor ama chatleri görememem tabii ki büyük bir talihsizlik oldu.**
+  - `opus-mt`: I think the screen is coming, but I can't see the chats, of course, it's been a huge misfortune.
+  - `tg4b`: I was hoping to see the screen, but of course, not being able to see the chats is a real disappointment.
+- [0:22] **Unut echem orayus.**
+  - `opus-mt`: Forget it, echem orayus.
+  - `tg4b`: Forget about it.
+- [0:24] **Chatleri göremememi sağlıyor.**
+  - `opus-mt`: It makes me unable to see the chats.
+  - `tg4b`: I can't see the chats.
+- [0:27] **Bunu da buraya alalım.**
+  - `opus-mt`: Let's take this here.
+  - `tg4b`: Let's add this one here too.
+- [0:29] **Evet şimdi görebiliyorum.**
+  - `opus-mt`: Yeah, I can see it now.
+  - `tg4b`: Yes, I can see that now.
+- [0:31] **Evet Şimdi bu sunumu ben daha önce yaptım.**
+  - `opus-mt`: Yes Now I've made this presentation before.
+  - `tg4b`: Yes, I actually did this presentation before.
+- [0:37] **Evet EuroPython'da yaptığım bir sunum 2017 yılında Europython'da yaptım.**
+  - `opus-mt`: Yes, I made a presentation at EuroPython in 2017.
+  - `tg4b`: Yes, I gave a presentation at EuroPython in 2017, at the EuroPython conference.
+- [0:46] **Remini'de.**
+  - `opus-mt`: In Remini.
+  - `tg4b`: In Remini.
+- [0:47] **tabi İngilizceydi o sunum.**
+  - `opus-mt`: Of course it was English.
+  - `tg4b`: Of course, the presentation was in English.
+- [0:49] **Burada yine aynı slide'ları kullanacağım çünkü seler dünyasında hiçbir şey değişmedi.**
+  - `opus-mt`: I'm going to use the same slides here again because nothing has changed in the world of the flood.
+  - `tg4b`: I’ll be using the same slides here, because nothing has changed in the world of fairies.
+- [0:53] **Muhtemelen 5 sene önce Fatih Erikli'nin yaptığı sunumla arasında da çok bir şey değişmedi.**
+  - `opus-mt`: Probably not much has changed between the presentation by Fatih Erikli five years ago.
+  - `tg4b`: Probably, not a huge amount has changed since the presentation Fatih Erikli made about five years ago.
+- [0:58] **Altyapı olarak tabii çok şeyler değişti ama kullanım ve bu sunumun kapsamındaki şeyler açısından çok bir değişiklik yok Kendimden bahsedeyim Ben**
+  - `opus-mt`: Much has changed in infrastructure, of course, but there is not much change in terms of use and what is included in this presentation. Let me talk about myself
+  - `tg4b`: The underlying structure has changed significantly, but there isn’t really a big difference in terms of what’s being discussed or the scope of this presentation. Let me introduce myself: Ben
+- [1:10] **Yiğit Güler Pay İstanbul üyelerinden biriyim.**
+  - `opus-mt`: I am one of the members of Yiğit Güler Pay Istanbul.
+  - `tg4b`: Yiğit Güler is one of the members from İstanbul.
+- [1:13] **Yaklaşık 7-8 yıldır buluşmaları düzenli olarak düzenliyoruz Hippo'da backend developer olarak çalışıyorum.**
+  - `opus-mt`: We've been organizing meetings regularly for about 7-8 years, and I've been working as a backend developer at Hippo.
+  - `tg4b`: For approximately 7-8 years, we have been organizing meetings regularly. I’ve been working as a backend developer at Hippo for about that long.
+- [1:25] **Sunumun başında bana göre çok önemli olan bir şeyden başlayacağım.**
+  - `opus-mt`: At the beginning of the presentation, I'm going to start with something that is very important to me.
+  - `tg4b`: I want to begin this presentation with something that I believe is extremely important to me.
+- [1:32] **Dünyada Python'ın ilerliyor ve günden güne daha popüler bir dil haline geliyor Bence bunun en önemli sebeplerinden bir tanesi de...**
+  - `opus-mt`: Python is moving forward in the world and becoming more and more popular language by day I think one of the most important reasons for this is...
+  - `tg4b`: The world is seeing Python gaining momentum and becoming increasingly popular. I believe one of the most important reasons for this is…
+- [1:42] **...durmanın ileridir popülerleşme ile beraber gelen değişik disiplinlerden kullanıcıların aynı dili kullanıyor olması.**
+  - `opus-mt`: ...the fact that users from different disciplines who come with the further popularization of the stop use the same language.
+  - `tg4b`: …as the trend continues, leading to the use of the same language by users from various disciplines.
+- [1:49] **örnek vermek gerekirse makine öğrenmesi ile uğraşan insanlar da Python kullanıyorlar Web sitesi yapan bizim gibi veya API**
+  - `opus-mt`: For example, people who are involved in machine learning also use Python like us who make websites or APIs
+  - `tg4b`: To give an example, people working with machine learning use Python, whether it’s for creating websites like us, or for developing APIs
+- [2:03] **astronomi ile uğraşan bilim insanları da Python kullanabiliyorlar ve bu çok büyük bir güç Öyle ki bence Python'un Node.js veya Ruby'e göre**
+  - `opus-mt`: Astronomers are also able to use Python, and it's a huge force, so I think it's a lot of power, according to Python's Node.js or Ruby
+  - `tg4b`: Scientists working in astronomy are also using Python, and this is a tremendous advantage. In my opinion, Python is superior to both Node.js and Ruby
+- [2:16] **en önemli Node.js bir dildi değil ama bir backend framework olarak söyleyeyim bir web projesi yaparken Python'un en önemli avantajı**
+  - `opus-mt`: The most important Node.js was not a language but as a backend framework let me say the most important advantage of Python when making a web project
+  - `tg4b`: While Node.js isn’t necessarily the most important language, when building a web project, one of the biggest advantages of Python is
+- [2:25] **çok değişik disiplinlerden değişik kodlara ulaşabilmek, değişik kütüphanelere ulaşabilmek ve bunları kullanabilmek.**
+  - `opus-mt`: To be able to access different codes from very different disciplines, to access different libraries and to use them.
+  - `tg4b`: The ability to access diverse sources from various disciplines, different codes, and various libraries, and to utilize them.
+- [2:35] **Ama tabii ki birçok kütüphane özellikle mesela genişleme işlerinde kullanılan kütüphaneler veya video compressing'de kullanılan kütüphaneler unlar**
+  - `opus-mt`: But of course, many libraries, especially libraries used in expansion work, or libraries used in video compression, flour
+  - `tg4b`: Of course, there are many libraries, especially those used in areas like expanding functionality or in video compression
+- [2:49] **alan işlemler olabiliyor Ve biz HTTP kuralları gereği bir request-response cycle içinde hareket ediyoruz Yani bir istek istemciden geliyor.**
+  - `opus-mt`: The field can be transactions, and we are moving in a request-response cycle by HTTP rules, so a request comes from the client.
+  - `tg4b`: These operations can be performed, and we operate within a request-response cycle according to HTTP rules. So, a request comes from a client.
+- [3:00] **sunucunun belli bir süresi var belli bir süreden fazla olursa bu tip 502 hatalarını görebiliyoruz ne olacak?**
+  - `opus-mt`: The server has a certain amount of time, so if it's more than a certain amount of time, we can see this type of 502 error, what happens?
+  - `tg4b`: If a server has a limited lifespan, and that lifespan is exceeded, we can observe these type of 502 errors – what will happen?
+- [3:10] **nginx ayarlarını gireriz, değiştiririz sunucunu daha da uzun süre beklemesini sağlarız tamam sağlayabiliriz ama şöyle bir problem olur düşünün ki siz bir düğmeye bastınız**
+  - `opus-mt`: We enter nginx settings, change the server, make it wait even longer, we can provide it, but imagine if there was a problem you pressed a button
+  - `tg4b`: We’ll configure Nginx, modify it to keep the server running for an extended period – we can certainly achieve that. However, consider this: you press a button
+- [3:22] **ve hiçbir şey olmadan 30-40 saniye bekliyorsunuz Bu kesinlikle ideal bir şey değil ideal bir akış değil.**
+  - `opus-mt`: And you wait 30-40 seconds with nothing, it's definitely not an ideal thing, it's not an ideal flow.
+  - `tg4b`: And you’re waiting for 30-40 seconds, with absolutely nothing happening. This is definitely not ideal – it’s not a smooth or efficient process at all.
+- [3:34] **ve bunun olmaması için de kullanabileceğimiz değişik çözümler var.**
+  - `opus-mt`: And there are different solutions that we can use to make sure that doesn't happen.
+  - `tg4b`: And there are several different solutions we can use to achieve this.
+- [3:41] **Seler de bunlardan bir tanesi Şimdi örnek bir flask uygulaması paylaşalım.**
+  - `opus-mt`: Seler is one of them Let's share an example flask application now.
+  - `tg4b`: “Seler is one of these. Let’s share an example of a Flask application.”
+- [3:49] **Öğ düşünelim ki biz bir web sitesiyiz ve insanların genlerini analiz ediyoruz.**
+  - `opus-mt`: Let's say we're a website and we analyze people's genes.
+  - `tg4b`: Let's imagine that we are a website, and we are analyzing people's genes.
+- [3:59] **Bu da bunu da**
+  - `opus-mt`: And this one, too
+  - `tg4b`: This too, and this too

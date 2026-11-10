@@ -1,0 +1,248 @@
+{
+  "started": "2026-11-09 17:24",
+  "machine": {
+    "chip": "Apple M4",
+    "memory_gb": 16,
+    "gpu_cores": "10",
+    "model": "MacBook Air",
+    "macos": "27.2",
+    "python": "3.13.18",
+    "power": "AC"
+  },
+  "asr": {
+    "small-750": {
+      "note": "small (244M, multilingual), 15 s encoder window",
+      "spec": {
+        "model": "mlx-community/whisper-small-mlx",
+        "audio_ctx": "750"
+      },
+      "load_s": 0.3,
+      "clips": {
+        "en_pizza_music": {
+          "text": "I would say that I am a musician trapped inside a body of a computer scientist. If you find what I am doing interesting, please feel free to reach out. You can contact me on LinkedIn. You will also find me on YouTube and on Instagram. I would be happy to say hello. So what you see here, a word cloud. This is a representation. a very high level representation. of a data set. So at the beginning of this year and later I'm going to tell a little bit more about that, I gathered a lot of heavy metal music as MIDI files. So I scraped the internet and I found a lot of songs in the heavy metal genre. What you see here is that I also went through the motions assigning subgenre labels to the MIDI files that I got. You see here? a big word means it's very presented. Small word means I don't have that many samples. You see that I have samples from fresh metal, heavy metal, black metal, deaf metal, power metal, doom metal, also speed metal, sludge metal, hardcore, post-hardcore, and so on and so forth. So quite a lot of material. and if I remember the numbers right, I have 7000 heavy metal songs. It's a good start. and as always, when you do deep learning, you need a lot of data. and I think 7000 samples of heavy metal music are already quite a lot. but you might wonder, assuming that you have a lot of music for example as MIDI files, which is a symbolic representation of songs,",
+          "runs": 171,
+          "asr_ms_mean": 274.90988258447373,
+          "asr_ms_p95": 388.503165988368,
+          "step_s": 0.5,
+          "first_p50": 0.4961189590067363,
+          "first_p95": 1.215839874996341,
+          "final_p50": 1.5773897920035544,
+          "final_p95": 3.1225049999972114,
+          "rewrite_rate": 0.10576923076923077,
+          "clauses": 45,
+          "wall_s": 47.866671541996766,
+          "audio_s": 90.0,
+          "wer_vs_ref": 0.040293040293040296,
+          "rss_mb": 1405
+        },
+        "en_pycon_shaw": {
+          "text": "And they have different use cases. So, for example, if I took this task here, which is to calculate the difference between the number 50 for an array of random numbers, if I split that in half, and executed it between two threads, in Python 3.12, it would take twice as long. I'm going to do that in a second. I'm because of the guilt, that's the main reason. but we can't run that fully in parallel and older versions of Python. Sorry. in 3.11, the guilt lived in the interpreter. but it a lot of caveats to that. really, we had one guilt per Python process. and the reason you use multiprocessing is to get fully parallel code execution. in 3.12, the ability to run multiple interpreters using a new API. And each one had its own gil. So is the per gil interpreter. This means where previously we can run one thing at a time per process now in Python 3.12 and 3.13, we can run two things at a time. And the CPUs, the operating system will figure out which core is available and schedule. so they can actually run fully in parallel. So... let's talk about speed for a minute. because this is where we're going to get back to our paper analogy.",
+          "runs": 170,
+          "asr_ms_mean": 272.0106688407695,
+          "asr_ms_p95": 362.80566699861083,
+          "step_s": 0.5,
+          "first_p50": 0.559578207997717,
+          "first_p95": 1.4142454589954454,
+          "final_p50": 1.7025644589911657,
+          "final_p95": 3.4617874579939496,
+          "rewrite_rate": 0.1595744680851064,
+          "clauses": 37,
+          "wall_s": 47.315963708999334,
+          "audio_s": 90.0,
+          "wer_vs_ref": 0.1036036036036036,
+          "rss_mb": 1405
+        },
+        "tr_meetup66": {
+          "text": "Kralya, Kralya, 'ye bir seçenek var. Zaten size bir tane yörenel desayn ediyor. Sizin eski suet saygı gibi. Amazonay'ın gezgisi, Konuşukluğuna. Kralya'nın yöntemi, Python, AmazonBug'u, SysSmox'u kullanmak ister. Kralya'nın. Python.",
+          "runs": 51,
+          "asr_ms_mean": 348.5509893131059,
+          "asr_ms_p95": 1262.9779589915415,
+          "step_s": 0.8618324895808959,
+          "first_p50": 1.23089229099266,
+          "first_p95": 5.346557875001338,
+          "final_p50": 4.766099917009008,
+          "final_p95": 8.466099917009007,
+          "rewrite_rate": 0.58,
+          "clauses": 12,
+          "wall_s": 18.494917416988756,
+          "audio_s": 90.0,
+          "wer_vs_ref": 0.835820895522388,
+          "rss_mb": 1392
+        },
+        "tr_meetup72": {
+          "text": "Çok çok. şey yapabiliyorsunuz. Mindermaster Sorter, Otur. 'la çalışan funksiyonlarda diyelim. Key diye bir parametre oluyor bu. Bunu yapacağım. Birazdan anlatacağımı göre daha karışık. LambdaXXH şeklinde. Diyorsunuz ki anın. Banda olsun. Bunların isimlerini değiştireyim. Espirin, As ile. Sikinin aslında karışık karşılaştır. Bana ona göre bir sonuç var. Bunu dediğim zaman tabi şuan oldukça çirkin. oldu ama... En küçük. karar objesinin kenarının 5 oldu. Daha doğrusu en küçük karar olduğu sonucu da var. Ocakladır. Kendi kendisinde birbirlerine olmasını istiyorum. zaman ne yapıyorum? buradaki comparison metodlarından Altı burada şunları da çok kısa yazayım. Burada birkaç tane daha metod var aslında. eql, less than, greater than, greater or equal, less or equal. struktur olarak da eşittir.",
+          "runs": 155,
+          "asr_ms_mean": 250.0327301358113,
+          "asr_ms_p95": 345.57704100734554,
+          "step_s": 0.5,
+          "first_p50": 0.7807725839909523,
+          "first_p95": 3.6489949169992357,
+          "final_p50": 1.8994455000010788,
+          "final_p95": 4.180772583990958,
+          "rewrite_rate": 0.45689655172413796,
+          "clauses": 29,
+          "wall_s": 39.565148458001204,
+          "audio_s": 90.0,
+          "wer_vs_ref": 0.543046357615894,
+          "rss_mb": 1410
+        }
+      }
+    },
+    "medium-750": {
+      "note": "medium (769M, multilingual), 15 s encoder window",
+      "spec": {
+        "model": "mlx-community/whisper-medium-mlx",
+        "audio_ctx": "750"
+      },
+      "load_s": 0.3,
+      "clips": {
+        "en_pizza_music": {
+          "text": "I would say that I am a musician trapped inside a body of a computer scientist. If you find what I am doing interesting, please feel free to reach out. You can contact me on LinkedIn. You will also find me on YouTube and on Instagram. I would be happy to say hello. So what you see here, a word cloud. This is a representation, a very high level representation of a data set. So at the beginning of this year, and later I'm going to tell a little bit more about that, I gathered a lot of heavy metal music as MIDI files. So I scraped the internet and I found a lot of songs in the heavy metal genre. What you see here is that I also went through the motions, assigning subgenre labels to the MIDI files that I got. You see here, a big word means it's very presented, Small word means I don't have that many samples. So you see that I have samples from fresh metal, heavy metal, black metal, death metal, power metal, doom metal, also speed metal, sludge metal, hardcore, post-hardcore, and so on and so forth. So quite a lot of material. And if I remember the numbers right, I have 7,000 heavy metal songs. It's a good start. And as always, when you do deep learning, you need a lot of data and I think 7,000 samples of heavy metal music are already quite a lot. But you might wonder. Assuming that you have a lot of music, for example as MIDI files, which is a symbolic representation of songs,",
+          "runs": 64,
+          "asr_ms_mean": 919.4768372030921,
+          "asr_ms_p95": 1227.5364999950398,
+          "step_s": 1.6116997014190324,
+          "first_p50": 1.5604425000053581,
+          "first_p95": 2.7903957079902852,
+          "final_p50": 3.55780208299565,
+          "final_p95": 5.279293084000699,
+          "rewrite_rate": 0.028268551236749116,
+          "clauses": 48,
+          "wall_s": 59.689273957992555,
+          "audio_s": 90.0,
+          "wer_vs_ref": 0.018315018315018316,
+          "rss_mb": 2481
+        },
+        "en_pycon_shaw": {
+          "text": "Benchmarks they have different use cases. for example, if I took this task here. Which is to calculate the difference between the number 50 for an array of random numbers and if I split that in half and executed it between two threads in Python 3.12, it would take twice as long. Because partly because of the GIL, actually that's the main reason, but we can't run that fully in parallel on older versions of Python. So in 3.11, the GIL lived in the interpreter, but there's a lot of caveats to that. So really we had one GIL per Python process. And the reason you use multiprocessing is to get fully parallel code execution. In 3.12, we had the ability to run multiple interpreters a new API. And each one had its own gil. So it's the per-GIL interpreter. This means where previously we can run one thing at a time per process. now in Python 3.12 and 3.13, we can run two things at a time. And the CPUs, the operating system will figure out which core is available and schedule so they can actually run fully in parallel. So let's talk about speed for a minute because this is where we're going to get back to our paper analogy.",
+          "runs": 68,
+          "asr_ms_mean": 850.8998773979649,
+          "asr_ms_p95": 1107.9641670075944,
+          "step_s": 1.517068905918374,
+          "first_p50": 1.4388489580105528,
+          "first_p95": 3.038499500003411,
+          "final_p50": 3.2444522909987654,
+          "final_p95": 5.236039249992345,
+          "rewrite_rate": 0.047619047619047616,
+          "clauses": 35,
+          "wall_s": 58.731000166997546,
+          "audio_s": 90.0,
+          "wer_vs_ref": 0.03153153153153153,
+          "rss_mb": 2483
+        },
+        "tr_meetup66": {
+          "text": "Burada Static Web Cycle Simpli seçenek var. Zaten size bir tane yöner esayn ediyor. Sizin eskişme esaynınız diye Amazon'a girebilirsiniz. Zaten size de bir şey söylemeyi unutmayın. Zaten size de bir şey söylemeyi unutmayın. Tamam ben buktum. Bir web sitesi için kullanmak istiyorum diye seçiyorum. Benim alasaykam burada girebilmek seçilemen olacak. Bir bulduklar getirdim de. Python.",
+          "runs": 26,
+          "asr_ms_mean": 858.2029213463941,
+          "asr_ms_p95": 1300.422249987605,
+          "step_s": 1.5683604199997112,
+          "first_p50": 2.0956262909835175,
+          "first_p95": 4.4386197080089485,
+          "final_p50": 4.79562629098352,
+          "final_p95": 7.362877667002497,
+          "rewrite_rate": 0.37623762376237624,
+          "clauses": 10,
+          "wall_s": 22.82403187500313,
+          "audio_s": 90.0,
+          "wer_vs_ref": 0.6417910447761194,
+          "rss_mb": 2456
+        },
+        "tr_meetup72": {
+          "text": "Python'daki çoğu çoğu metod, şey yapabiliyorsunuz. yapabilirsiniz. min'dir, max'dır, sort'dır, otur, keywordlerle çalışan fonksiyonlarda diyelim. key diye bir parametre oluyor bu. burada yapacağım şey birazdan anlatacağıma göre daha karışık. lambda x, x, a şeklinde diyorsunuz ki a 'nın anadolsun. bunun isimlerini değiştireyim. espirin a'sıyla skin'in a'sını karışık karşılaştır. bana ona göre bir sonuç ver. bunu dediğimiz zaman, tabi şu an oldukça çirkinim. oldu ama en küçük kare objesinin kenarının 5 olduğu daha doğrusu kare'sinde 5, kenarı 5 olan karenin en küçük kare olduğu sonucunda varabiliyoruz ama niye böyle bir şey yapmam gereksin benim niye böyle bir ekstra bir fantastik bir tanımlama yazmam gereksin oraya ben objelerin kendi içinde birbirlerine karşılaştırılabilir olmasını istiyorum. o zaman ne yapıyorum buradaki comparison metodlarından, altı burada şunları da çok kısa yazayım daha burada birkaç tane daha metod var aslında ekul, less than, greater than, greater or equal, less or equal stüdyo olarak da eşittir",
+          "runs": 61,
+          "asr_ms_mean": 901.5848878680415,
+          "asr_ms_p95": 1399.7102919965982,
+          "step_s": 1.7400526039988715,
+          "first_p50": 1.7650833330005469,
+          "first_p95": 4.366160250002167,
+          "final_p50": 3.5432942500028304,
+          "final_p95": 6.569617290992056,
+          "rewrite_rate": 0.1875,
+          "clauses": 31,
+          "wall_s": 55.791382707990124,
+          "audio_s": 90.0,
+          "wer_vs_ref": 0.2582781456953642,
+          "rss_mb": 2487
+        }
+      }
+    },
+    "turbo-750": {
+      "note": "large-v3-turbo, 15 s encoder window",
+      "spec": {
+        "model": "mlx-community/whisper-large-v3-turbo",
+        "audio_ctx": "750"
+      },
+      "load_s": 0.2,
+      "clips": {
+        "en_pizza_music": {
+          "text": "I would say that I am a musician trapped inside a body of a computer scientist. If you find what I'm doing interesting, please feel free to reach out. You can contact me on LinkedIn. You will also find me on YouTube and on Instagram. I would be happy to say hello. So what you see here, a word cloud. This is a representation, a very high level representation of a data set. So at the beginning of this year and later I'm going to tell a little bit more about that. I gathered a lot of heavy metal music as MIDI files. So I scraped the internet and I found a lot of songs in the heavy metal genre. What you see here is that I also went through the motions assigning sub-genre labels to the MIDI files that I got. You see here a big word means it's very presented. Small word means I don't have that many samples. So you see that I have samples from fresh metal, heavy metal, black metal, death metal, power metal, doom metal, also speed metal, sludge metal, hardcore, post-hardcore and so on and so forth. So quite a lot of material and if I remember the numbers right I have 7000 heavy metal songs. It's a good start and as always when you do deep learning you need a lot of data and I think 7000 samples of heavy metal music are already quite a lot. you but you might wonder assuming that you have a lot of music for example as midi files which is a symbolic representation of songs",
+          "runs": 63,
+          "asr_ms_mean": 870.4021567139694,
+          "asr_ms_p95": 995.4555000003893,
+          "step_s": 1.3885329061643765,
+          "first_p50": 1.5786144169960181,
+          "first_p95": 2.8301557909999957,
+          "final_p50": 3.701401500000962,
+          "final_p95": 5.6249542499919185,
+          "rewrite_rate": 0.02857142857142857,
+          "clauses": 48,
+          "wall_s": 55.45076362500549,
+          "audio_s": 90.0,
+          "wer_vs_ref": 0.02197802197802198,
+          "rss_mb": 2316
+        },
+        "en_pycon_shaw": {
+          "text": "And they have different use cases. So for example, if I took this task here, which is to calculate the difference between the number 50 for an array of random numbers. if I split that in half and executed it between two threads in Python 3.12, it would take twice as long. partly because of the gill, actually that's the main reason, but we can't run that fully in parallel on older versions of Python. So in 3.11, the gill lived in the interpreter, but... There's a lot of caveats to that. So really, we had one gill per Python process, and the reason you use multi-processing is to get fully parallel code execution. In 3.12, we had the ability to run multiple interpreters using a new API. And each one had its own gil. So it's the per gil interpreter. This means where previously we can run one thing at a time per process, now in Python 3.12 and 3.13, we can run two things at a time. And the CPUs, the operating system, will figure out which core is available and schedule so they can actually run fully in parallel. So let's talk about speed for a minute because this is where we're going to get back to our paper analogy.",
+          "runs": 68,
+          "asr_ms_mean": 832.1253044846611,
+          "asr_ms_p95": 918.0269580101594,
+          "step_s": 1.4674649476643633,
+          "first_p50": 1.3736525829938415,
+          "first_p95": 2.437453374995617,
+          "final_p50": 3.463527666004836,
+          "final_p95": 5.478469665998006,
+          "rewrite_rate": 0.1450381679389313,
+          "clauses": 34,
+          "wall_s": 57.41905162499461,
+          "audio_s": 90.0,
+          "wer_vs_ref": 0.036036036036036036,
+          "rss_mb": 2320
+        },
+        "tr_meetup66": {
+          "text": "Bu, Static Web Cycle Syncli bir seçenek var. Zaten size bir taneyi öğren ve sayın ediyor. Sizin eskişime sahip diye baktınız ve Amazon eylemli .com teşekkür ederim. Tamam, ben bu baktı. bilim ve sıçtınmak için kullanmak istiyorum diye seçiyorum ve benim anada sayfam burada indexleştirebilen olacak. yöven krali etki indizli? bu arada index. ayı",
+          "runs": 23,
+          "asr_ms_mean": 856.398882174171,
+          "asr_ms_p95": 946.3982500019483,
+          "step_s": 1.4343914651678158,
+          "first_p50": 1.9127225410005693,
+          "first_p95": 4.922365582994999,
+          "final_p50": 4.667249042007487,
+          "final_p95": 6.55665237500437,
+          "rewrite_rate": 0.3431372549019608,
+          "clauses": 12,
+          "wall_s": 20.037733334000222,
+          "audio_s": 90.0,
+          "wer_vs_ref": 0.6865671641791045,
+          "rss_mb": 2307
+        },
+        "tr_meetup72": {
+          "text": "Hachit. bir şey yapabiliyorsunuz Python'daki çoğu metot şey. çoğu böyle işte. min'dir, max'dır, sort'dır işte. o tür keyword'lerle çalışan fonksiyonlarda diyelim. key diye bir parametre oluyor bu. burada yapacağım şey birazdan anlatacağıma göre daha karışık. Lambda x x a şeklinde. diyorsunuz ki a'nın mandor so bunun isimlerini değiştireyim. S1'in a'sıyla S2'nin a'sını karışır karşılaştır. Bana ona göre bir sonuç var. bunu dediğimiz zaman tabi şu an oldukça çirkin oldu ama en küçük kare objesinin kenarının 5 olduğu daha doğrusu kenarı 5 olan karenin en küçük kare olduğu sonucuna varabiliyoruz ama niye böyle bir şey yapmam gereksin benim? niye böyle bir ekstra bir fantez bir tanımlama yazmam gereksin oraya? Ben objelerin kendi içinde birbirlerine karşılaştırılabilir olmasını istiyorum. o zaman ne yapıyorum? buradaki comparison metodlarından, Alt'ı bu arada şunları da çok kısa yazayım. Burada birkaç tane daha metot var aslında. Equal, Last than, Greater than, Greater or Equal, Less or Equal. Türkçe olarak da eşittir.",
+          "runs": 65,
+          "asr_ms_mean": 842.8563998920324,
+          "asr_ms_p95": 986.266040999908,
+          "step_s": 1.5062664370816492,
+          "first_p50": 1.6833655420043492,
+          "first_p95": 4.01021949998848,
+          "final_p50": 3.5741773330128126,
+          "final_p95": 6.149773166997125,
+          "rewrite_rate": 0.1780821917808219,
+          "clauses": 32,
+          "wall_s": 55.381299250002485,
+          "audio_s": 90.0,
+          "wer_vs_ref": 0.15894039735099338,
+          "rss_mb": 2308
+        }
+      }
+    }
+  }
+}

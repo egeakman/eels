@@ -1,0 +1,78 @@
+{
+  "started": "2026-11-09 20:33",
+  "machine": {
+    "chip": "Apple M4",
+    "memory_gb": 16,
+    "gpu_cores": "10",
+    "model": "MacBook Air",
+    "macos": "27.2",
+    "python": "3.13.18",
+    "power": "AC"
+  },
+  "mt": {
+    "opus-mt": {
+      "note": "Opus-MT tc-big via CTranslate2 int8 on the CPU",
+      "spec": {
+        "model": "opus-mt"
+      },
+      "directions": {
+        "en->tr": {
+          "chrf": 71.3,
+          "ms_p50": 109.0,
+          "ms_p95": 170.0
+        },
+        "tr->en": {
+          "chrf": 71.9,
+          "ms_p50": 106.0,
+          "ms_p95": 175.0
+        }
+      },
+      "rejected": 0,
+      "rss_mb": 893,
+      "load_s": 0.9
+    },
+    "tg4b": {
+      "note": "TranslateGemma 4B 4-bit, no context (default)",
+      "spec": {
+        "model": "mlx-community/translategemma-4b-it-4bit",
+        "context_pairs": 0
+      },
+      "directions": {
+        "en->tr": {
+          "chrf": 59.1,
+          "ms_p50": 567.0,
+          "ms_p95": 701.0
+        },
+        "tr->en": {
+          "chrf": 62.7,
+          "ms_p50": 454.0,
+          "ms_p95": 578.0
+        }
+      },
+      "rejected": 0,
+      "rss_mb": 2770,
+      "load_s": 1.7
+    },
+    "hymt1.8b": {
+      "note": "Tencent HY-MT1.5 1.8B, MLX 8-bit",
+      "spec": {
+        "model": "/Users/egeakman/.cache/live-translate/HY-MT1.5-1.8B-mlx-8bit"
+      },
+      "directions": {
+        "en->tr": {
+          "chrf": 64.1,
+          "ms_p50": 634.0,
+          "ms_p95": 820.0
+        },
+        "tr->en": {
+          "chrf": 66.1,
+          "ms_p50": 384.0,
+          "ms_p95": 548.0
+        }
+      },
+      "rejected": 0,
+      "rss_mb": 2198,
+      "load_s": 0.4
+    }
+  }
+}
