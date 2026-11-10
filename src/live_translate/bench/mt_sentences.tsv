@@ -1,0 +1,49 @@
+src	source	reference
+en	Today I want to talk about how we turned a slow Python function into a Rust module.	Bugün yavaş bir Python fonksiyonunu nasıl bir Rust modülüne dönüştürdüğümüzden bahsetmek istiyorum.
+en	The profiler showed that ninety percent of the time was spent in one loop.	Profilleyici, sürenin yüzde doksanının tek bir döngüde geçtiğini gösterdi.
+en	So the first question is, do you really need a message broker?	Yani ilk soru şu: gerçekten bir mesaj aracısına ihtiyacınız var mı?
+en	Most task queues use Redis or RabbitMQ,	Çoğu görev kuyruğu Redis ya da RabbitMQ kullanır,
+en	but for small projects you can just use your database.	ama küçük projeler için doğrudan veritabanınızı kullanabilirsiniz.
+en	A regular expression is just a tiny language for describing patterns in text.	Düzenli ifade, metindeki kalıpları tanımlamak için kullanılan küçük bir dildir.
+en	The plus sign means one or more, and the star means zero or more.	Artı işareti bir veya daha fazla, yıldız ise sıfır veya daha fazla anlamına gelir.
+en	In Django, query parameters are available on the request object.	Django'da sorgu parametrelerine request nesnesi üzerinden erişilebilir.
+en	If you have ever written a REST API, you know this pain.	Daha önce bir REST API yazdıysanız bu acıyı bilirsiniz.
+en	We run the model directly on the edge device, without any cloud.	Modeli hiçbir bulut kullanmadan doğrudan uç cihazda çalıştırıyoruz.
+en	It processes about thirty frames per second on a small GPU.	Küçük bir GPU üzerinde saniyede yaklaşık otuz kare işliyor.
+en	Every token you send to the model costs money and adds latency.	Modele gönderdiğiniz her token para tutar ve gecikmeyi artırır.
+en	Let me show you a quick demo, if the Wi-Fi cooperates.	Wi-Fi izin verirse size hızlı bir demo göstereyim.
+en	It talks like a human, but it is not a human.	İnsan gibi konuşuyor ama insan değil.
+en	DuckDB can read Parquet files directly, so you don't need a cluster.	DuckDB, Parquet dosyalarını doğrudan okuyabilir, bu yüzden bir kümeye ihtiyacınız yok.
+en	and that was basically the whole trick.	ve temelde bütün numara buydu.
+en	So, um, where was I? Right, the benchmarks.	Şey, nerede kalmıştım? Evet, performans testleri.
+en	Thank you so much, and I'm happy to take questions.	Çok teşekkür ederim, sorularınızı yanıtlamaktan memnuniyet duyarım.
+en	The garbage collector does not know about objects that live in Rust.	Çöp toplayıcı, Rust'ta yaşayan nesnelerden haberdar değildir.
+en	Write small patterns, test them often, and add comments.	Küçük kalıplar yazın, sık sık test edin ve yorum ekleyin.
+en	You can install it with pip, or with uv if you like speed.	pip ile ya da hız seviyorsanız uv ile kurabilirsiniz.
+en	When the queue is empty, the worker just sleeps for a second.	Kuyruk boş olduğunda işçi bir saniye uyur.
+en	This is where things get interesting.	İşte burada işler ilginçleşiyor.
+en	who has used FastAPI before? Raise your hand.	daha önce FastAPI kullanan var mı? Elinizi kaldırın.
+tr	Herkese merhaba, bugün size FastAPI ile sıfırdan üretime nasıl geçtiğimizi anlatacağım.	Hello everyone, today I will tell you how we went from zero to production with FastAPI.
+tr	Önce küçük bir prototip yazdık, sonra veritabanı bağlantısını ekledik.	First we wrote a small prototype, then we added the database connection.
+tr	Asıl zorluk testleri ve dağıtımı otomatik hale getirmekti.	The real challenge was automating the tests and the deployment.
+tr	Docker kullanarak her ortamı aynı hale getirdik.	Using Docker, we made every environment the same.
+tr	Üretimde neyin bozulduğunu hemen görmek istiyorduk.	We wanted to see immediately what was breaking in production.
+tr	MicroPython ile küçük bir mikrodenetleyici üzerinde Python çalıştırabiliyorsunuz.	With MicroPython you can run Python on a small microcontroller.
+tr	E-ink ekranın en güzel yanı, güç kesildiğinde bile görüntünün kalması.	The best thing about an e-ink screen is that the image stays even when the power is cut.
+tr	Bu kartı yaklaşık iki yüz liraya aldım.	I bought this board for about two hundred lira.
+tr	PyCon Türkiye ilk kez yirmi on sekizde düzenlendi.	PyCon Turkey was first held in twenty eighteen.
+tr	Gönüllüler olmasaydı bu etkinlik hiç gerçekleşmezdi.	Without the volunteers this event would never have happened.
+tr	Tembel değerlendirme sayesinde sadece ihtiyacımız olan veriyi hesaplıyoruz.	Thanks to lazy evaluation, we only compute the data we need.
+tr	Yani kısacası, hem hızlı hem de tembel olabilirsiniz.	So in short, you can be both fast and lazy.
+tr	Şimdi size kodun bu kısmını göstermek istiyorum,	Now I want to show you this part of the code,
+tr	çünkü asıl sihir burada oluyor.	because this is where the real magic happens.
+tr	Bir sorunuz varsa konuşmadan sonra beni bulabilirsiniz.	If you have a question, you can find me after the talk.
+tr	Bu fonksiyon bir liste alıyor ve bir sözlük döndürüyor.	This function takes a list and returns a dictionary.
+tr	Hata ayıklarken en çok zamanı loglara bakarak geçirdik.	While debugging we spent most of the time looking at the logs.
+tr	Geçen yıl topluluk iki katına çıktı.	Last year the community doubled in size.
+tr	Eee, nerede kalmıştım? Evet, performans kısmı.	Um, where was I? Right, the performance part.
+tr	Bu yaklaşımın bir dezavantajı var, o da bellek kullanımı.	This approach has one drawback, and that is memory usage.
+tr	Uygulamayı Kubernetes yerine tek bir sunucuda çalıştırıyoruz.	We run the application on a single server instead of Kubernetes.
+tr	Çok teşekkür ederim, hepinize iyi eğlenceler.	Thank you very much, and have fun, everyone.
+tr	ve bu şekilde gecikmeyi yarıya indirdik.	and this way we cut the latency in half.
+tr	Eğer sizin de böyle bir projeniz varsa, mutlaka paylaşın.	If you have a project like this too, be sure to share it.
