@@ -3,8 +3,19 @@ __pycache__/
 *.py[cod]
 .venv/
 .pytest_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
 
 # Runtime data: settings, transcripts, logs, benchmark audio and results
 var/
+
+# Exported captions and test audio (export-srt -o, play FILE)
+*.srt
+*.wav
+*.mp3
+*.m4a
+*.flac
 
 .DS_Store
