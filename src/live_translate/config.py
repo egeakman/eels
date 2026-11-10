@@ -81,7 +81,7 @@ class Settings(BaseModel):
     max_backlog_s: float = Field(6.0, ge=2.0, le=30.0)
 
 
-def mt_for(settings: "Settings", src: str, tgt: str) -> str:
+def mt_for(settings: Settings, src: str, tgt: str) -> str:
     """The translation model used for one direction."""
     if (src, tgt) == ("en", "tr") and settings.mt_model_en_tr:
         return settings.mt_model_en_tr

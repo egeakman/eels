@@ -15,14 +15,73 @@ from .streaming import fold
 
 # Turkish words that do carry gender; if one is present the translation is left as is.
 TR_GENDER_CUES = {
-    "kadın", "adam", "erkek", "kız", "kızı", "kızım", "oğlan", "oğul", "oğlu", "oğlum", "bayan", "bay",
-    "bey", "beyefendi", "hanım", "hanımefendi", "anne", "annem", "annesi", "baba", "babam", "babası",
-    "abla", "ablam", "ablası", "abi", "abim", "abisi", "ağabey", "teyze", "amca", "dayı", "hala", "karı",
-    "karısı", "koca", "kocası", "eşi", "kral", "kraliçe", "kardeşi", "dede", "nine", "babaanne", "anneanne",
+    "kadın",
+    "adam",
+    "erkek",
+    "kız",
+    "kızı",
+    "kızım",
+    "oğlan",
+    "oğul",
+    "oğlu",
+    "oğlum",
+    "bayan",
+    "bay",
+    "bey",
+    "beyefendi",
+    "hanım",
+    "hanımefendi",
+    "anne",
+    "annem",
+    "annesi",
+    "baba",
+    "babam",
+    "babası",
+    "abla",
+    "ablam",
+    "ablası",
+    "abi",
+    "abim",
+    "abisi",
+    "ağabey",
+    "teyze",
+    "amca",
+    "dayı",
+    "hala",
+    "karı",
+    "karısı",
+    "koca",
+    "kocası",
+    "eşi",
+    "kral",
+    "kraliçe",
+    "kardeşi",
+    "dede",
+    "nine",
+    "babaanne",
+    "anneanne",
 }
 
-ADVERBS = {"always", "never", "often", "also", "just", "really", "still", "usually", "sometimes", "only",
-           "even", "already", "actually", "probably", "certainly", "rarely", "now", "then"}
+ADVERBS = {
+    "always",
+    "never",
+    "often",
+    "also",
+    "just",
+    "really",
+    "still",
+    "usually",
+    "sometimes",
+    "only",
+    "even",
+    "already",
+    "actually",
+    "probably",
+    "certainly",
+    "rarely",
+    "now",
+    "then",
+}
 
 # Contractions and irregular verbs after he/she.
 FIXED = [
@@ -44,11 +103,58 @@ FIXED = [
 ]
 
 # "her" before a noun is possessive (their), otherwise it is an object (them).
-HER_OBJECT_NEXT = {"", "and", "or", "but", "to", "for", "with", "about", "from", "in", "on", "at", "that",
-                   "because", "so", "again", "too", "very", "now", "then", "here", "there", "back", "up",
-                   "down", "out", "off", "away", "yesterday", "today", "tomorrow", "tonight", "last", "every",
-                   "a", "an", "the", "this", "my", "your", "our", "their", "his", "its", "some", "what", "how",
-                   "if", "when", "why"} | ADVERBS
+HER_OBJECT_NEXT = {
+    "",
+    "and",
+    "or",
+    "but",
+    "to",
+    "for",
+    "with",
+    "about",
+    "from",
+    "in",
+    "on",
+    "at",
+    "that",
+    "because",
+    "so",
+    "again",
+    "too",
+    "very",
+    "now",
+    "then",
+    "here",
+    "there",
+    "back",
+    "up",
+    "down",
+    "out",
+    "off",
+    "away",
+    "yesterday",
+    "today",
+    "tomorrow",
+    "tonight",
+    "last",
+    "every",
+    "a",
+    "an",
+    "the",
+    "this",
+    "my",
+    "your",
+    "our",
+    "their",
+    "his",
+    "its",
+    "some",
+    "what",
+    "how",
+    "if",
+    "when",
+    "why",
+} | ADVERBS
 
 
 def _match_case(src: str, repl: str) -> str:
@@ -78,14 +184,14 @@ def neutralize(english: str, turkish_source: str) -> str:
         return english
     out = english
     for pattern, repl in FIXED:
-        out = re.sub(pattern, lambda m, r=repl: _match_case(m.group(0), r), out, flags=re.I)
+        out = re.sub(pattern, lambda m, r=repl: _match_case(m.group(0), r), out, flags=re.IGNORECASE)
 
     # "her": possessive before a noun, object otherwise.
     def her(m: re.Match) -> str:
         nxt = (m.group(2) or "").lower()
-        return _match_case(m.group(1), "them" if nxt in HER_OBJECT_NEXT else "their") + m.group(0)[len(m.group(1)):]
+        return _match_case(m.group(1), "them" if nxt in HER_OBJECT_NEXT else "their") + m.group(0)[len(m.group(1)) :]
 
-    out = re.sub(r"\b(her)\b(?=(?:[\s,.!?;:]+(\w+))?)", lambda m: her(m), out, flags=re.I)
+    out = re.sub(r"\b(her)\b(?=(?:[\s,.!?;:]+(\w+))?)", lambda m: her(m), out, flags=re.IGNORECASE)
 
     # he/she + optional adverb + present-tense verb: "he likes" -> "they like".
     def subj(m: re.Match) -> str:
@@ -93,7 +199,7 @@ def neutralize(english: str, turkish_source: str) -> str:
         return _match_case(pron, "they") + adv + _base_verb(verb)
 
     adv_re = "|".join(sorted(ADVERBS))
-    out = re.sub(rf"\b(he|she)((?:\s+(?:{adv_re}))?\s+)([a-z]+s)\b", subj, out, flags=re.I)
+    out = re.sub(rf"\b(he|she)((?:\s+(?:{adv_re}))?\s+)([a-z]+s)\b", subj, out, flags=re.IGNORECASE)
     # Remaining bare he/she (before modals, past tense, etc.): "he will" -> "they will".
-    out = re.sub(r"\b(he|she)\b", lambda m: _match_case(m.group(1), "they"), out, flags=re.I)
+    out = re.sub(r"\b(he|she)\b", lambda m: _match_case(m.group(1), "they"), out, flags=re.IGNORECASE)
     return out

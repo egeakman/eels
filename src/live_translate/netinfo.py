@@ -11,7 +11,7 @@ def _hardware_ports() -> dict[str, str]:
     """Map device (en0) to hardware port name (Wi-Fi, USB 10/100/1000 LAN, Thunderbolt Ethernet...)."""
     try:
         out = subprocess.run(
-            ["networksetup", "-listallhardwareports"], capture_output=True, text=True, timeout=5
+            ["networksetup", "-listallhardwareports"], capture_output=True, text=True, timeout=5, check=False
         ).stdout
     except Exception:
         return {}
@@ -28,7 +28,7 @@ def _hardware_ports() -> dict[str, str]:
 def lan_addresses() -> list[dict]:
     """Return [{'ip', 'iface', 'port', 'kind'}] for active non-loopback IPv4 interfaces."""
     try:
-        out = subprocess.run(["ifconfig"], capture_output=True, text=True, timeout=5).stdout
+        out = subprocess.run(["ifconfig"], capture_output=True, text=True, timeout=5, check=False).stdout
     except Exception:
         out = ""
     ports = _hardware_ports()
@@ -42,7 +42,7 @@ def lan_addresses() -> list[dict]:
         m = re.match(r"^\s+inet (\d+\.\d+\.\d+\.\d+)", line)
         if m and iface:
             ip = m.group(1)
-            if ip.startswith("127.") or ip.startswith("169.254."):
+            if ip.startswith(("127.", "169.254.")):
                 continue
             port = ports.get(iface, iface)
             low = port.lower()
@@ -50,7 +50,7 @@ def lan_addresses() -> list[dict]:
                 kind = "Wi-Fi"
             elif "ethernet" in low or "lan" in low or "thunderbolt" in low:
                 kind = "wired"
-            elif iface.startswith("utun") or iface.startswith("bridge"):
+            elif iface.startswith(("utun", "bridge")):
                 kind = "virtual"
             else:
                 kind = "other"

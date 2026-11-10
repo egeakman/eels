@@ -42,6 +42,7 @@ bench = [
 ]
 dev = [
     "pytest>=9.2.0",
+    "ruff>=0.17.4",
 ]
 
 [tool.pyright]
@@ -53,3 +54,11 @@ testpaths = ["tests"]
 
 [tool.uv]
 default-groups = ["dev", "bench"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+# The app must keep subtitling through any single failure (device query, worker, network
+# probe), so broad `except Exception` handlers are deliberate.
+ignore = ["BLE001", "S110", "S112"]

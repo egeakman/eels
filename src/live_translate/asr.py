@@ -56,7 +56,9 @@ class MlxWhisperBackend:
         t0 = time.perf_counter()
         self.model = load_model(model, dtype=mx.float16)
         self.tokenizers = {
-            lang: get_tokenizer(self.model.is_multilingual, num_languages=self.model.num_languages, language=lang, task="transcribe")
+            lang: get_tokenizer(
+                self.model.is_multilingual, num_languages=self.model.num_languages, language=lang, task="transcribe"
+            )
             for lang in ("en", "tr")
         }
         load_s = time.perf_counter() - t0
@@ -78,7 +80,7 @@ class MlxWhisperBackend:
         return min(n_ctx, ((need + 63) // 64) * 64)
 
     def encode(self, audio: np.ndarray):
-        import mlx.nn as nn
+        from mlx import nn
         from mlx_whisper.audio import N_FRAMES, N_SAMPLES, log_mel_spectrogram, pad_or_trim
 
         mx = self.mx
@@ -128,9 +130,8 @@ class MlxWhisperBackend:
         cached = _CachedFeatures(self.model, feats)
         res = decode(cached, feats[0], opts)
         words = []
-        bad = (
-            res.compression_ratio > COMPRESSION_RATIO
-            or (res.no_speech_prob > NO_SPEECH_PROB and res.avg_logprob < LOGPROB_THRESHOLD)
+        bad = res.compression_ratio > COMPRESSION_RATIO or (
+            res.no_speech_prob > NO_SPEECH_PROB and res.avg_logprob < LOGPROB_THRESHOLD
         )
         tok = self.tokenizers.get(language) or self.tokenizers["en"]
         text_tokens = [t for t in res.tokens if t < tok.eot]

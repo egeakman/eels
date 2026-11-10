@@ -11,8 +11,8 @@ import ctypes
 import ctypes.util
 import importlib
 import logging
-import os
 import multiprocessing as mp
+import os
 import queue
 import threading
 import time
@@ -32,11 +32,24 @@ class _RUsageInfoV2(ctypes.Structure):
     _fields_ = [("ri_uuid", ctypes.c_uint8 * 16)] + [
         (name, ctypes.c_uint64)
         for name in (
-            "ri_user_time", "ri_system_time", "ri_pkg_idle_wkups", "ri_interrupt_wkups", "ri_pageins",
-            "ri_wired_size", "ri_resident_size", "ri_phys_footprint", "ri_proc_start_abstime",
-            "ri_proc_exit_abstime", "ri_child_user_time", "ri_child_system_time", "ri_child_pkg_idle_wkups",
-            "ri_child_interrupt_wkups", "ri_child_pageins", "ri_child_elapsed_abstime",
-            "ri_diskio_bytesread", "ri_diskio_byteswritten",
+            "ri_user_time",
+            "ri_system_time",
+            "ri_pkg_idle_wkups",
+            "ri_interrupt_wkups",
+            "ri_pageins",
+            "ri_wired_size",
+            "ri_resident_size",
+            "ri_phys_footprint",
+            "ri_proc_start_abstime",
+            "ri_proc_exit_abstime",
+            "ri_child_user_time",
+            "ri_child_system_time",
+            "ri_child_pkg_idle_wkups",
+            "ri_child_interrupt_wkups",
+            "ri_child_pageins",
+            "ri_child_elapsed_abstime",
+            "ri_diskio_bytesread",
+            "ri_diskio_byteswritten",
         )
     ]
 
@@ -262,8 +275,12 @@ class WorkerClient:
                 # Memory right after loading and warm-up: the watchdog limit is relative to this,
                 # so bigger models (a 7B or 27B translator) are not mistaken for a leak.
                 self.status.baseline_mb = self.rss_mb()
-                log.info("%s worker ready in %.1fs (%s MB)", self.name, time.monotonic() - self._spawned_at,
-                         None if self.status.baseline_mb is None else round(self.status.baseline_mb))
+                log.info(
+                    "%s worker ready in %.1fs (%s MB)",
+                    self.name,
+                    time.monotonic() - self._spawned_at,
+                    None if self.status.baseline_mb is None else round(self.status.baseline_mb),
+                )
                 return True
             if msg[0] == "__fatal__":
                 self.status.state = "error"

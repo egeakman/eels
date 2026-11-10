@@ -51,7 +51,7 @@ class TranscriptLog:
 
 def _srt_time(seconds: float) -> str:
     seconds = max(0.0, seconds)
-    ms = int(round(seconds * 1000))
+    ms = round(seconds * 1000)
     h, ms = divmod(ms, 3_600_000)
     m, ms = divmod(ms, 60_000)
     s, ms = divmod(ms, 1000)
@@ -102,4 +102,3 @@ def export_srt(
     for i, (a, b, body) in enumerate(rows, 1):
         out.append(f"{i}\n{_srt_time(a)} --> {_srt_time(b)}\n{body}\n")
     return "\n".join(out)
-

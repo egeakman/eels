@@ -13,8 +13,14 @@ def test_fixes_near_exact_names_keeping_suffix_and_punctuation():
 
 def test_leaves_ordinary_words_alone():
     c = NameCorrector(NAMES)
-    for text in ("seler dünyasında hiçbir şey değişmedi", "bir seler var", "Django is great",
-                 "we celebrate today", "Raspberry jam", "Python is fun"):
+    for text in (
+        "seler dünyasında hiçbir şey değişmedi",
+        "bir seler var",
+        "Django is great",
+        "we celebrate today",
+        "Raspberry jam",
+        "Python is fun",
+    ):
         assert c.correct(text) == (text, []), text
 
 

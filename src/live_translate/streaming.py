@@ -17,8 +17,27 @@ SAMPLE_RATE = 16000
 SENTENCE_END = re.compile(r"[.!?…][\"'”)\]]*$")
 CLAUSE_END = re.compile(r"[,;:][\"'”)\]]*$")
 # A period that usually does not end a sentence: Turkish ordinals ("30." = "30th") and abbreviations.
-ABBREVIATIONS = {"m.ö.", "m.s.", "dr.", "prof.", "doç.", "vb.", "vs.", "örn.", "yy.", "mr.", "mrs.", "ms.",
-                 "e.g.", "i.e.", "st.", "no.", "vol.", "fig.", "approx."}
+ABBREVIATIONS = {
+    "m.ö.",
+    "m.s.",
+    "dr.",
+    "prof.",
+    "doç.",
+    "vb.",
+    "vs.",
+    "örn.",
+    "yy.",
+    "mr.",
+    "mrs.",
+    "ms.",
+    "e.g.",
+    "i.e.",
+    "st.",
+    "no.",
+    "vol.",
+    "fig.",
+    "approx.",
+}
 
 
 def ambiguous_period(token: str) -> bool:
@@ -71,8 +90,34 @@ def clean_prompt_text(text: str) -> str:
 
 TURKISH_LETTERS = set("ğışçöüĞİŞÇÖÜ")
 TURKISH_WORDS = {
-    "bir", "ve", "bu", "şu", "için", "ile", "çok", "ne", "de", "da", "mı", "mi", "değil", "var", "yok",
-    "gibi", "ama", "şey", "olarak", "daha", "ben", "sen", "biz", "siz", "evet", "hayır", "tamam", "yani",
+    "bir",
+    "ve",
+    "bu",
+    "şu",
+    "için",
+    "ile",
+    "çok",
+    "ne",
+    "de",
+    "da",
+    "mı",
+    "mi",
+    "değil",
+    "var",
+    "yok",
+    "gibi",
+    "ama",
+    "şey",
+    "olarak",
+    "daha",
+    "ben",
+    "sen",
+    "biz",
+    "siz",
+    "evet",
+    "hayır",
+    "tamam",
+    "yani",
 }
 
 
@@ -113,9 +158,7 @@ def is_hallucination(text: str) -> bool:
         return True
     # Same short phrase repeated many times ("you you you you")
     toks = t.split()
-    if len(toks) >= 6 and len(set(toks)) <= max(1, len(toks) // 5):
-        return True
-    return False
+    return len(toks) >= 6 and len(set(toks)) <= max(1, len(toks) // 5)
 
 
 class HypothesisBuffer:
@@ -201,10 +244,7 @@ class OnlineASR:
 
     def apply(self, result: ASRResult) -> tuple[list[Word], list[Word]]:
         """Feed one ASR hypothesis for the current buffer. Returns (newly committed, tentative)."""
-        words = [
-            Word(w.start + self.buffer_offset, w.end + self.buffer_offset, w.text, w.prob)
-            for w in result.words
-        ]
+        words = [Word(w.start + self.buffer_offset, w.end + self.buffer_offset, w.text, w.prob) for w in result.words]
         self.hyp.insert(words)
         commit = self.hyp.flush()
         self.committed.extend(commit)
@@ -243,7 +283,7 @@ class OnlineASR:
             self.trim_to(cut)
 
     def trim_to(self, t: float) -> None:
-        n = int(round((t - self.buffer_offset) * SAMPLE_RATE))
+        n = round((t - self.buffer_offset) * SAMPLE_RATE)
         n = max(0, min(n, len(self.audio)))
         self.audio = self.audio[n:]
         self.buffer_offset += n / SAMPLE_RATE

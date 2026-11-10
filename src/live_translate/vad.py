@@ -16,9 +16,7 @@ class SileroVAD:
         opts = onnxruntime.SessionOptions()
         opts.inter_op_num_threads = 1
         opts.intra_op_num_threads = 1
-        self.session = onnxruntime.InferenceSession(
-            str(path), sess_options=opts, providers=["CPUExecutionProvider"]
-        )
+        self.session = onnxruntime.InferenceSession(str(path), sess_options=opts, providers=["CPUExecutionProvider"])
         self._sr = np.array(16000, dtype=np.int64)
         self.reset()
 
@@ -29,9 +27,7 @@ class SileroVAD:
 
     def frame_prob(self, frame: np.ndarray) -> float:
         x = np.concatenate([self._context, frame.reshape(1, FRAME)], axis=1)
-        out, self._state = self.session.run(
-            None, {"input": x, "state": self._state, "sr": self._sr}
-        )
+        out, self._state = self.session.run(None, {"input": x, "state": self._state, "sr": self._sr})
         self._context = x[:, -CONTEXT:]
         return float(out[0, 0])
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import time
 import unicodedata
+from typing import ClassVar
 
 from .streaming import SENTENCE_END, split_sentences
 
@@ -20,7 +21,9 @@ def check_translation(src: str, out: str, tgt: str) -> str | None:
     ratio = len(o) / max(1, len(s))
     if len(s) >= 12 and not (0.3 <= ratio <= 3.5):
         return f"length ratio {ratio:.2f}"
-    if any(ord(ch) > 0x2FF and not (0x2000 <= ord(ch) <= 0x206F) and unicodedata.category(ch).startswith("L") for ch in o):
+    if any(
+        ord(ch) > 0x2FF and not (0x2000 <= ord(ch) <= 0x206F) and unicodedata.category(ch).startswith("L") for ch in o
+    ):
         return "non-Latin script in output"
     if tgt == "en" and sum(ch in TURKISH_ONLY for ch in o) >= 2:
         return "output looks Turkish"
@@ -29,7 +32,7 @@ def check_translation(src: str, out: str, tgt: str) -> str | None:
 
 def clean_output(text: str, src: str = "") -> str:
     text = text.replace("<end_of_turn>", "").strip()
-    text = re.sub(r"^(translation|çeviri)\s*:\s*", "", text, flags=re.I)
+    text = re.sub(r"^(translation|çeviri)\s*:\s*", "", text, flags=re.IGNORECASE)
     if len(text) >= 2 and text[0] == text[-1] and text[0] in "\"'“”":
         text = text[1:-1].strip()
     text = text.split("\n\n")[0].strip()
@@ -61,9 +64,15 @@ class MlxLmTranslator:
 
     def _render(self, text: str, src: str, tgt: str) -> str:
         if self.is_translategemma:
-            msg = {"role": "user", "content": [{"type": "text", "source_lang_code": src, "target_lang_code": tgt, "text": text}]}
+            msg = {
+                "role": "user",
+                "content": [{"type": "text", "source_lang_code": src, "target_lang_code": tgt, "text": text}],
+            }
         else:  # HY-MT's template for non-Chinese pairs (from its model card)
-            msg = {"role": "user", "content": f"Translate the following segment into {LANG_NAMES[tgt]}, without additional explanation.\n\n{text}"}
+            msg = {
+                "role": "user",
+                "content": f"Translate the following segment into {LANG_NAMES[tgt]}, without additional explanation.\n\n{text}",
+            }
         return self.tokenizer.apply_chat_template([msg], add_generation_prompt=True, tokenize=False)
 
     def _encode(self, prompt: str) -> list[int]:
@@ -106,10 +115,18 @@ class MlxLmTranslator:
             tokens = tokens[len(prefix) :]
         out = []
         try:
-            for resp in stream_generate(self.model, self.tokenizer, tokens, max_tokens=min(256, 16 + 4 * len(text.split())),
-                                        sampler=self.sampler, **kwargs):
+            for resp in stream_generate(
+                self.model,
+                self.tokenizer,
+                tokens,
+                max_tokens=min(256, 16 + 4 * len(text.split())),
+                sampler=self.sampler,
+                **kwargs,
+            ):
                 out.append(resp.text)
-                if any(stop in resp.text for stop in ("<end_of_turn>", "<|eos|>", "<|endoftext|>")) or "\n\n" in "".join(out[-3:]):
+                if any(
+                    stop in resp.text for stop in ("<end_of_turn>", "<|eos|>", "<|endoftext|>")
+                ) or "\n\n" in "".join(out[-3:]):
                     break
         finally:
             if cache is not None:
@@ -129,19 +146,53 @@ class MlxLmTranslator:
 # Product and tool names Opus-MT tends to translate ("Parquet" -> "Parke", "Docker" -> "a docker").
 # They are swapped for placeholders before translation and restored afterwards.
 PROTECTED_TERMS = [
-    "Parquet", "Docker", "Kubernetes", "GitHub", "GitLab", "PyPI", "Jupyter", "NumPy", "pandas", "Polars",
-    "Redis", "RabbitMQ", "Celery", "Django", "FastAPI", "Flask", "Pydantic", "Rust", "DuckDB", "MicroPython",
-    "Ultralytics", "PyCon", "Python Pizza", "Linux", "macOS", "Raspberry Pi", "Arduino", "OpenAI", "Claude",
-    "Kahoot", "Slido", "Discord", "Telegram", "YouTube", "LinkedIn",
+    "Parquet",
+    "Docker",
+    "Kubernetes",
+    "GitHub",
+    "GitLab",
+    "PyPI",
+    "Jupyter",
+    "NumPy",
+    "pandas",
+    "Polars",
+    "Redis",
+    "RabbitMQ",
+    "Celery",
+    "Django",
+    "FastAPI",
+    "Flask",
+    "Pydantic",
+    "Rust",
+    "DuckDB",
+    "MicroPython",
+    "Ultralytics",
+    "PyCon",
+    "Python Pizza",
+    "Linux",
+    "macOS",
+    "Raspberry Pi",
+    "Arduino",
+    "OpenAI",
+    "Claude",
+    "Kahoot",
+    "Slido",
+    "Discord",
+    "Telegram",
+    "YouTube",
+    "LinkedIn",
 ]
-_TERM_RE = re.compile(r"(?<![\w-])(" + "|".join(re.escape(t) for t in sorted(PROTECTED_TERMS, key=len, reverse=True)) + r")(?![\w-])", re.I)
+_TERM_RE = re.compile(
+    r"(?<![\w-])(" + "|".join(re.escape(t) for t in sorted(PROTECTED_TERMS, key=len, reverse=True)) + r")(?![\w-])",
+    re.IGNORECASE,
+)
 
 
 def _terms_re(extra: tuple[str, ...]) -> re.Pattern:
     if not extra:
         return _TERM_RE
     terms = sorted(set(PROTECTED_TERMS) | set(extra), key=len, reverse=True)
-    return re.compile(r"(?<![\w-])(" + "|".join(re.escape(t) for t in terms) + r")(?![\w-])", re.I)
+    return re.compile(r"(?<![\w-])(" + "|".join(re.escape(t) for t in terms) + r")(?![\w-])", re.IGNORECASE)
 
 
 def protect_terms(text: str, extra: list[str] | tuple[str, ...] = ()) -> tuple[str, list[str]]:
@@ -167,13 +218,20 @@ def restore_terms(text: str, found: list[str]) -> str | None:
 class OpusMtTranslator:
     """Helsinki-NLP Opus-MT tc-big via CTranslate2 int8 on the CPU (~0.15 s per clause)."""
 
-    MODELS = {
+    MODELS: ClassVar[dict[tuple[str, str], str]] = {
         ("en", "tr"): "Helsinki-NLP/opus-mt-tc-big-en-tr",
         ("tr", "en"): "Helsinki-NLP/opus-mt-tc-big-tr-en",
     }
     # Only what conversion and the tokenizer need (the repos also hold PyTorch and TF copies).
-    FILES = ["config.json", "generation_config.json", "*.spm", "vocab.json", "tokenizer_config.json",
-             "special_tokens_map.json", "model.safetensors"]
+    FILES: ClassVar[list[str]] = [
+        "config.json",
+        "generation_config.json",
+        "*.spm",
+        "vocab.json",
+        "tokenizer_config.json",
+        "special_tokens_map.json",
+        "model.safetensors",
+    ]
 
     def __init__(self, model: str = "opus-mt", beam_size: int = 2, **_):
         """model "opus-mt": CTranslate2 int8 on the CPU (CTranslate2 has no Apple GPU support).
@@ -194,8 +252,12 @@ class OpusMtTranslator:
                 self.pairs[pair] = (net, tok)
             else:
                 self.pairs[pair] = (self._ct2(repo, local), tok)
-        self.info = {"backend": "torch-mps" if self.device == "mps" else "ctranslate2", "model": "opus-mt-tc-big",
-                     "device": self.device, "load_s": round(time.perf_counter() - t0, 1)}
+        self.info = {
+            "backend": "torch-mps" if self.device == "mps" else "ctranslate2",
+            "model": "opus-mt-tc-big",
+            "device": self.device,
+            "load_s": round(time.perf_counter() - t0, 1),
+        }
 
     @staticmethod
     def _ct2(repo: str, local: str):
@@ -206,8 +268,9 @@ class OpusMtTranslator:
         out_dir = MODEL_DIR / repo.split("/")[-1]
         if not (out_dir / "model.bin").exists():
             ctranslate2.converters.TransformersConverter(local).convert(str(out_dir), quantization="int8", force=True)
-        return ctranslate2.Translator(str(out_dir), device="cpu", compute_type="int8", inter_threads=1,
-                                      intra_threads=performance_cores())
+        return ctranslate2.Translator(
+            str(out_dir), device="cpu", compute_type="int8", inter_threads=1, intra_threads=performance_cores()
+        )
 
     def _translate(self, text: str, src: str, tgt: str) -> str:
         net, tok = self.pairs[(src, tgt)]
@@ -247,7 +310,11 @@ def performance_cores() -> int:
     import subprocess
 
     try:
-        n = int(subprocess.run(["sysctl", "-n", "hw.perflevel0.physicalcpu"], capture_output=True, text=True).stdout)
+        n = int(
+            subprocess.run(
+                ["sysctl", "-n", "hw.perflevel0.physicalcpu"], capture_output=True, text=True, check=False
+            ).stdout
+        )
         return max(1, n)
     except Exception:
         return max(1, (os.cpu_count() or 4) // 2)

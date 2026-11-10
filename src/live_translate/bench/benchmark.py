@@ -37,7 +37,7 @@ SENTENCES = Path(__file__).with_name("mt_sentences.tsv")
 def machine_info() -> dict:
     def sh(*cmd):
         try:
-            return subprocess.run(cmd, capture_output=True, text=True, timeout=5).stdout.strip()
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=5, check=False).stdout.strip()
         except Exception:
             return ""
 
@@ -68,18 +68,88 @@ def r(x, n=2):
 
 
 _TR_UNITS = {"sıfır": 0, "bir": 1, "iki": 2, "üç": 3, "dört": 4, "beş": 5, "altı": 6, "yedi": 7, "sekiz": 8, "dokuz": 9}
-_TR_TENS = {"on": 10, "yirmi": 20, "otuz": 30, "kırk": 40, "elli": 50, "altmış": 60, "yetmiş": 70, "seksen": 80, "doksan": 90}
-_TR_ORD = {"birinci": 1, "ikinci": 2, "üçüncü": 3, "dördüncü": 4, "beşinci": 5, "altıncı": 6, "yedinci": 7, "sekizinci": 8,
-           "dokuzuncu": 9, "onuncu": 10, "yirminci": 20, "otuzuncu": 30, "kırkıncı": 40, "ellinci": 50, "yüzüncü": 100}
-_EN_UNITS = {"zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
-             "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
-             "seventeen": 17, "eighteen": 18, "nineteen": 19}
-_EN_TENS = {"twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90}
-_EN_ORD = {"first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5, "sixth": 6, "seventh": 7, "eighth": 8,
-           "ninth": 9, "tenth": 10, "twentieth": 20, "thirtieth": 30, "hundredth": 100}
+_TR_TENS = {
+    "on": 10,
+    "yirmi": 20,
+    "otuz": 30,
+    "kırk": 40,
+    "elli": 50,
+    "altmış": 60,
+    "yetmiş": 70,
+    "seksen": 80,
+    "doksan": 90,
+}
+_TR_ORD = {
+    "birinci": 1,
+    "ikinci": 2,
+    "üçüncü": 3,
+    "dördüncü": 4,
+    "beşinci": 5,
+    "altıncı": 6,
+    "yedinci": 7,
+    "sekizinci": 8,
+    "dokuzuncu": 9,
+    "onuncu": 10,
+    "yirminci": 20,
+    "otuzuncu": 30,
+    "kırkıncı": 40,
+    "ellinci": 50,
+    "yüzüncü": 100,
+}
+_EN_UNITS = {
+    "zero": 0,
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+    "eleven": 11,
+    "twelve": 12,
+    "thirteen": 13,
+    "fourteen": 14,
+    "fifteen": 15,
+    "sixteen": 16,
+    "seventeen": 17,
+    "eighteen": 18,
+    "nineteen": 19,
+}
+_EN_TENS = {
+    "twenty": 20,
+    "thirty": 30,
+    "forty": 40,
+    "fifty": 50,
+    "sixty": 60,
+    "seventy": 70,
+    "eighty": 80,
+    "ninety": 90,
+}
+_EN_ORD = {
+    "first": 1,
+    "second": 2,
+    "third": 3,
+    "fourth": 4,
+    "fifth": 5,
+    "sixth": 6,
+    "seventh": 7,
+    "eighth": 8,
+    "ninth": 9,
+    "tenth": 10,
+    "twentieth": 20,
+    "thirtieth": 30,
+    "hundredth": 100,
+}
 # Only unambiguous number words: "bir" (a/one) and "one" are too often not numbers, so they stay words.
-_NUM = {**{k: v for k, v in _TR_UNITS.items() if k != "bir"}, **_TR_ORD,
-        **{k: v for k, v in _EN_UNITS.items() if k != "one"}, **_EN_ORD}
+_NUM = {
+    **{k: v for k, v in _TR_UNITS.items() if k != "bir"},
+    **_TR_ORD,
+    **{k: v for k, v in _EN_UNITS.items() if k != "one"},
+    **_EN_ORD,
+}
 _TENS = {**_TR_TENS, **_EN_TENS}
 
 
@@ -106,7 +176,9 @@ def norm_text(text: str) -> str:
     """Normalise for WER: case, punctuation, apostrophes (Turkish suffixes are written both
     "Sinan'ın" and "Sinanın"), circumflexes (mekân/mekan) and number words vs digits."""
     t = unicodedata.normalize("NFC", text).casefold().replace("i\u0307", "i")
-    t = t.translate(str.maketrans({"\u2019": "", "\u2018": "", "\u02bc": "", "'": "", "\u00e2": "a", "\u00ee": "i", "\u00fb": "u"}))
+    t = t.translate(
+        str.maketrans({"\u2019": "", "\u2018": "", "\u02bc": "", "'": "", "\u00e2": "a", "\u00ee": "i", "\u00fb": "u"})
+    )
     t = re.sub(r"[^\w\s]", " ", t)
     return " ".join(_numbers_to_digits(t.split()))
 
@@ -168,7 +240,9 @@ def reference_text(name: str, lang: str, audio: np.ndarray, quick: bool) -> str:
 
 
 # ASR -------------------------------------------------------------------------------
-def simulate_asr(worker: WorkerClient, audio: np.ndarray, lang: str, step: float, interim: bool = True, title=None) -> dict:
+def simulate_asr(
+    worker: WorkerClient, audio: np.ndarray, lang: str, step: float, interim: bool = True, title=None
+) -> dict:
     """Run the real StreamEngine over a clip with a simulated clock.
 
     The clock is the audio position; each ASR call starts when both the audio is there
@@ -207,7 +281,7 @@ def simulate_asr(worker: WorkerClient, audio: np.ndarray, lang: str, step: float
         from .. import schedule as sched
 
         sessions = sched.load()
-        title = lambda lang: hints.asr_hint(lang, sessions)  # noqa: E731
+        title = lambda lang: hints.asr_hint(lang, sessions)
     engine = StreamEngine(lambda: settings, asr_fn, on_clause, on_interim, clock=lambda: state["now"], title=title)
     # Record when each word first appears (tentative or committed) for "first text" delay.
     orig_apply = engine.online.apply
@@ -215,7 +289,7 @@ def simulate_asr(worker: WorkerClient, audio: np.ndarray, lang: str, step: float
     def apply(result):
         committed, tentative = orig_apply(result)
         for w in committed + tentative:
-            key = (w.norm, int(round(w.start * 5)))
+            key = (w.norm, round(w.start * 5))
             first_seen.setdefault(key, state["result_t"] - w.end)
         shown_tentative.extend(tentative)
         return committed, tentative
@@ -280,9 +354,12 @@ def run_asr(names: list[str], quick: bool, out: dict) -> None:
             res["wer_vs_ref"] = jiwer.wer(norm_text(refs[name]), norm_text(res["text"])) if res["text"] else 1.0
             res["rss_mb"] = rss_mb(worker._proc.pid if worker._proc else None)
             per_clip[name] = res
-            print(f"  {name}: {res['asr_ms_mean']:.0f} ms/run, step {res['step_s']:.2f} s, first {r(res['first_p50'])} s, "
-                  f"final {r(res['final_p50'])}/{r(res['final_p95'])} s, rewrites {res['rewrite_rate']:.0%}, "
-                  f"WER vs large-v3 {res['wer_vs_ref']:.1%}", flush=True)
+            print(
+                f"  {name}: {res['asr_ms_mean']:.0f} ms/run, step {res['step_s']:.2f} s, first {r(res['first_p50'])} s, "
+                f"final {r(res['final_p50'])}/{r(res['final_p95'])} s, rewrites {res['rewrite_rate']:.0%}, "
+                f"WER vs large-v3 {res['wer_vs_ref']:.1%}",
+                flush=True,
+            )
         worker.stop()
         results[cand] = {"note": note, "spec": spec, "load_s": load, "clips": per_clip}
 
@@ -326,11 +403,21 @@ def run_mt(names: list[str], out: dict) -> None:
                 "ms_p50": r(pct([times[i] for i in idx], 0.5), 0),
                 "ms_p95": r(pct([times[i] for i in idx], 0.95), 0),
             }
-        results[cand] = {"note": note, "spec": spec, "directions": by_dir, "rejected": rejected, "rss_mb": rss,
-                         "load_s": worker.status.info.get("load_s")}
+        results[cand] = {
+            "note": note,
+            "spec": spec,
+            "directions": by_dir,
+            "rejected": rejected,
+            "rss_mb": rss,
+            "load_s": worker.status.info.get("load_s"),
+        }
         outputs[cand] = hyps
-        print("  " + ", ".join(f"{k}: chrF {v['chrf']}, {v['ms_p50']} ms (p95 {v['ms_p95']})" for k, v in by_dir.items())
-              + f", guard rejections {rejected}", flush=True)
+        print(
+            "  "
+            + ", ".join(f"{k}: chrF {v['chrf']}, {v['ms_p50']} ms (p95 {v['ms_p95']})" for k, v in by_dir.items())
+            + f", guard rejections {rejected}",
+            flush=True,
+        )
     out["_mt_outputs"] = {"rows": rows, "outputs": outputs}
 
 
@@ -350,8 +437,12 @@ def run_pipeline(pairs: list[str], soak_min: float, out: dict, out_dir: Path) ->
         mspec, _ = candidates.MT[mt_name]
         print(f"Pipeline {pair} (real time, ASR and MT sharing the GPU)", flush=True)
         store = SettingsStore(out_dir / f"settings_{pair}.json")
-        store.update(asr_model=aspec["model"], asr_audio_ctx=aspec.get("audio_ctx", "750"), mt_model=mspec["model"],
-                     auto_from_schedule=False)
+        store.update(
+            asr_model=aspec["model"],
+            asr_audio_ctx=aspec.get("audio_ctx", "750"),
+            mt_model=mspec["model"],
+            auto_from_schedule=False,
+        )
         p = Pipeline(store, lambda ch, msg: None)
         p.mt_extra = {k: v for k, v in mspec.items() if k != "model"}
         p.transcript = TranscriptLog(out_dir / f"transcripts_{pair}")
@@ -369,18 +460,33 @@ def run_pipeline(pairs: list[str], soak_min: float, out: dict, out_dir: Path) ->
 
             sf.write(path, audio, SAMPLE_RATE)
             p.play_file(str(path))
-            p.player.on_done = lambda: done.__setitem__("v", True)
+            p.player.on_done = lambda done=done: done.__setitem__("v", True)
             while not done["v"]:
                 time.sleep(0.5)
             time.sleep(4)  # let the last translations land
             st = p.status()
-            per[name] = {k: st[k] for k in ("asr_ms", "asr_step_s", "mt_ms", "delay_interim_p50", "delay_interim_p95",
-                                            "delay_confirmed_p50", "delay_confirmed_p95", "skips", "keeping_up")}
+            per[name] = {
+                k: st[k]
+                for k in (
+                    "asr_ms",
+                    "asr_step_s",
+                    "mt_ms",
+                    "delay_interim_p50",
+                    "delay_interim_p95",
+                    "delay_confirmed_p50",
+                    "delay_confirmed_p95",
+                    "skips",
+                    "keeping_up",
+                )
+            }
             per[name]["rss_asr_mb"] = rss_mb(p.asr._proc.pid if p.asr._proc else None)
             per[name]["rss_mt_mb"] = sum(rss_mb(w._proc.pid) or 0 for w in p.mt_pool.values() if w._proc)
-            print(f"  {name}: first text {st['delay_interim_p50']}/{st['delay_interim_p95']} s, final text "
-                  f"{st['delay_confirmed_p50']}/{st['delay_confirmed_p95']} s, ASR {st['asr_ms']} ms every "
-                  f"{st['asr_step_s']} s, MT {st['mt_ms']} ms, skips {st['skips']}", flush=True)
+            print(
+                f"  {name}: first text {st['delay_interim_p50']}/{st['delay_interim_p95']} s, final text "
+                f"{st['delay_confirmed_p50']}/{st['delay_confirmed_p95']} s, ASR {st['asr_ms']} ms every "
+                f"{st['asr_step_s']} s, MT {st['mt_ms']} ms, skips {st['skips']}",
+                flush=True,
+            )
         soak = None
         if soak_min > 0:
             soak = run_soak(p, data, soak_min, out_dir)
@@ -404,14 +510,19 @@ def run_soak(p, data, minutes: float, out_dir: Path) -> dict:
         while p.player and p.player.is_alive() and time.monotonic() < t_end:
             time.sleep(30)
             st = p.status()
-            samples.append({
-                "t_min": round((minutes * 60 - (t_end - time.monotonic())) / 60, 1),
-                "asr_ms": st["asr_ms"], "mt_ms": st["mt_ms"], "final_p50": st["delay_confirmed_p50"],
-                "final_p95": st["delay_confirmed_p95"], "skips": st["skips"],
-                "rss_asr_mb": rss_mb(p.asr._proc.pid if p.asr._proc else None),
-                "rss_mt_mb": sum(rss_mb(w._proc.pid) or 0 for w in p.mt_pool.values() if w._proc),
-                "restarts": [w["restarts"] for w in st["workers"]],
-            })
+            samples.append(
+                {
+                    "t_min": round((minutes * 60 - (t_end - time.monotonic())) / 60, 1),
+                    "asr_ms": st["asr_ms"],
+                    "mt_ms": st["mt_ms"],
+                    "final_p50": st["delay_confirmed_p50"],
+                    "final_p95": st["delay_confirmed_p95"],
+                    "skips": st["skips"],
+                    "rss_asr_mb": rss_mb(p.asr._proc.pid if p.asr._proc else None),
+                    "rss_mt_mb": sum(rss_mb(w._proc.pid) or 0 for w in p.mt_pool.values() if w._proc),
+                    "restarts": [w["restarts"] for w in st["workers"]],
+                }
+            )
             print(f"    {samples[-1]}", flush=True)
     p.player and p.player.stop()
     return {"minutes": minutes, "samples": samples}
@@ -420,40 +531,68 @@ def run_soak(p, data, minutes: float, out_dir: Path) -> dict:
 # Report ----------------------------------------------------------------------------
 def write_report(out: dict, out_dir: Path) -> Path:
     m = out["machine"]
-    lines = [f"# Benchmark {out['started']}", "",
-             f"{m.get('model')} ({m.get('chip')}, {m.get('gpu_cores')} GPU cores, {m.get('memory_gb')} GB), macOS {m.get('macos')}, on {m.get('power')}.", ""]
+    lines = [
+        f"# Benchmark {out['started']}",
+        "",
+        f"{m.get('model')} ({m.get('chip')}, {m.get('gpu_cores')} GPU cores, {m.get('memory_gb')} GB), macOS {m.get('macos')}, on {m.get('power')}.",
+        "",
+    ]
     if out.get("asr"):
-        lines += ["## Speech recognition (streaming simulation, one model on the GPU)", "",
-                  "| Candidate | Clip | ms per run (p95) | Step s | First text s (p50/p95) | Final text s (p50/p95) | Rewrites | WER vs large-v3 |",
-                  "|---|---|---|---|---|---|---|---|"]
+        lines += [
+            "## Speech recognition (streaming simulation, one model on the GPU)",
+            "",
+            "| Candidate | Clip | ms per run (p95) | Step s | First text s (p50/p95) | Final text s (p50/p95) | Rewrites | WER vs large-v3 |",
+            "|---|---|---|---|---|---|---|---|",
+        ]
         for cand, res in out["asr"].items():
             for clip, c in res["clips"].items():
-                lines.append(f"| {cand} | {clip} | {c['asr_ms_mean']:.0f} ({c['asr_ms_p95']:.0f}) | {c['step_s']:.2f} | "
-                             f"{r(c['first_p50'])} / {r(c['first_p95'])} | {r(c['final_p50'])} / {r(c['final_p95'])} | "
-                             f"{c['rewrite_rate']:.0%} | {c['wer_vs_ref']:.1%} |")
-        lines += ["", "WER is measured against an offline large-v3 transcript, not a human one: it shows agreement, not accuracy.", ""]
+                lines.append(
+                    f"| {cand} | {clip} | {c['asr_ms_mean']:.0f} ({c['asr_ms_p95']:.0f}) | {c['step_s']:.2f} | "
+                    f"{r(c['first_p50'])} / {r(c['first_p95'])} | {r(c['final_p50'])} / {r(c['final_p95'])} | "
+                    f"{c['rewrite_rate']:.0%} | {c['wer_vs_ref']:.1%} |"
+                )
+        lines += [
+            "",
+            "WER is measured against an offline large-v3 transcript, not a human one: it shows agreement, not accuracy.",
+            "",
+        ]
     if out.get("mt"):
-        lines += ["## Translation (sentence set in bench/mt_sentences.tsv)", "",
-                  "| Candidate | EN→TR chrF | EN→TR ms p50 (p95) | TR→EN chrF | TR→EN ms p50 (p95) | Guard rejections | Memory MB |",
-                  "|---|---|---|---|---|---|---|"]
+        lines += [
+            "## Translation (sentence set in bench/mt_sentences.tsv)",
+            "",
+            "| Candidate | EN→TR chrF | EN→TR ms p50 (p95) | TR→EN chrF | TR→EN ms p50 (p95) | Guard rejections | Memory MB |",
+            "|---|---|---|---|---|---|---|",
+        ]
         for cand, res in out["mt"].items():
             a, b = res["directions"]["en->tr"], res["directions"]["tr->en"]
-            lines.append(f"| {cand} | {a['chrf']} | {a['ms_p50']} ({a['ms_p95']}) | {b['chrf']} | {b['ms_p50']} ({b['ms_p95']}) | {res['rejected']} | {res['rss_mb']} |")
+            lines.append(
+                f"| {cand} | {a['chrf']} | {a['ms_p50']} ({a['ms_p95']}) | {b['chrf']} | {b['ms_p50']} ({b['ms_p95']}) | {res['rejected']} | {res['rss_mb']} |"
+            )
         lines += ["", "Side-by-side outputs for human review: mt_review.md", ""]
     if out.get("pipeline"):
-        lines += ["## Full pipeline in real time (ASR and MT sharing the GPU, 90 s excerpts)", "",
-                  "| Pair | Clip | First text s (p50/p95) | Final text s (p50/p95) | ASR ms / step s | MT ms | Skips |",
-                  "|---|---|---|---|---|---|---|"]
+        lines += [
+            "## Full pipeline in real time (ASR and MT sharing the GPU, 90 s excerpts)",
+            "",
+            "| Pair | Clip | First text s (p50/p95) | Final text s (p50/p95) | ASR ms / step s | MT ms | Skips |",
+            "|---|---|---|---|---|---|---|",
+        ]
         for pair, res in out["pipeline"].items():
             for clip, c in res["clips"].items():
-                lines.append(f"| {pair} | {clip} | {c['delay_interim_p50']} / {c['delay_interim_p95']} | {c['delay_confirmed_p50']} / "
-                             f"{c['delay_confirmed_p95']} | {c['asr_ms']} / {c['asr_step_s']} | {c['mt_ms']} | {c['skips']} |")
+                lines.append(
+                    f"| {pair} | {clip} | {c['delay_interim_p50']} / {c['delay_interim_p95']} | {c['delay_confirmed_p50']} / "
+                    f"{c['delay_confirmed_p95']} | {c['asr_ms']} / {c['asr_step_s']} | {c['mt_ms']} | {c['skips']} |"
+                )
             if res.get("soak"):
                 s = res["soak"]["samples"]
                 if s:
-                    lines += ["", f"Soak {res['soak']['minutes']} min, {pair}: first sample ASR {s[0]['asr_ms']} ms / final p50 {s[0]['final_p50']} s, "
-                              f"last sample ASR {s[-1]['asr_ms']} ms / final p50 {s[-1]['final_p50']} s, memory ASR {s[-1]['rss_asr_mb']} MB, "
-                              f"MT {s[-1]['rss_mt_mb']} MB, skips {s[-1]['skips']}, restarts {s[-1]['restarts']}."]
+                    lines += [
+                        "",
+                        (
+                            f"Soak {res['soak']['minutes']} min, {pair}: first sample ASR {s[0]['asr_ms']} ms / final p50 {s[0]['final_p50']} s, "
+                            f"last sample ASR {s[-1]['asr_ms']} ms / final p50 {s[-1]['final_p50']} s, memory ASR {s[-1]['rss_asr_mb']} MB, "
+                            f"MT {s[-1]['rss_mt_mb']} MB, skips {s[-1]['skips']}, restarts {s[-1]['restarts']}."
+                        ),
+                    ]
         lines.append("")
     path = out_dir / "report.md"
     path.write_text("\n".join(lines))

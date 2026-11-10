@@ -1,9 +1,10 @@
 """StreamEngine behaviour with a fake Whisper (no models, no VAD speech needed)."""
+
 import numpy as np
 
 from live_translate.config import Settings
 from live_translate.engine import StreamEngine
-from live_translate.streaming import clean_prompt_text, looks_turkish, has_content
+from live_translate.streaming import clean_prompt_text, has_content, looks_turkish
 
 
 def make_engine(script, spoken="en"):
@@ -22,7 +23,9 @@ def make_engine(script, spoken="en"):
 
     settings = Settings(spoken_language=spoken, interim=False)
     clock = {"t": 0.0}
-    eng = StreamEngine(lambda: settings, asr_fn, lambda c, src, seq: clauses.append((c.text, src)), clock=lambda: clock["t"])
+    eng = StreamEngine(
+        lambda: settings, asr_fn, lambda c, src, seq: clauses.append((c.text, src)), clock=lambda: clock["t"]
+    )
     eng.test_clock = clock
     eng.online.reset(0.0)
     eng.gate.in_speech = True
@@ -57,8 +60,7 @@ def test_ellipsis_spiral_does_not_reach_screen_or_prompt():
 def test_engine_recovers_after_long_silence_of_words():
     # Whisper returns nothing for a long time (stuck), then real words again.
     script = [[]] * 20 + [["We", "are", "back."]] * 3
-    eng, calls, clauses = make_engine(script)
-    eng.history.extend([])  # start with no context
+    eng, _calls, clauses = make_engine(script)
     for _ in range(23):
         feed(eng, 1.0)
         eng.run_asr()
@@ -68,7 +70,9 @@ def test_engine_recovers_after_long_silence_of_words():
 
 
 def test_detect_switches_to_turkish_when_words_are_clearly_turkish():
-    eng, calls, clauses = make_engine([["Uzun", "ince", "bir", "yoldayım,", "gidiyorum", "gündüz", "gece."]] * 3, spoken="auto")
+    eng, _calls, clauses = make_engine(
+        [["Uzun", "ince", "bir", "yoldayım,", "gidiyorum", "gündüz", "gece."]] * 3, spoken="auto"
+    )
     eng.last_lang = "en"
     for _ in range(3):
         feed(eng, 1.0)
@@ -84,8 +88,11 @@ def test_helpers():
 
 
 def test_looks_turkish_does_not_fire_on_english():
-    for t in ("Today I will talk about Python and Rust.", "Here is my shopping list with coffee and milk.",
-              "Thanks for coming to my talk, see you in Prague."):
+    for t in (
+        "Today I will talk about Python and Rust.",
+        "Here is my shopping list with coffee and milk.",
+        "Thanks for coming to my talk, see you in Prague.",
+    ):
         assert not looks_turkish(t), t
     for t in ("Merhaba arkadaşlar, nasılsınız?", "Bu bir test.", "Nasıl gidiyor gününüz?"):
         assert looks_turkish(t), t
@@ -95,10 +102,13 @@ def test_prompt_echo_at_utterance_start_is_dropped():
     from live_translate.engine import drop_prompt_echo
     from live_translate.streaming import Word
 
-    ws = [Word(i, i + 0.4, " " + t) for i, t in enumerate("Python Pizza Istanbul. Python, Django, the little girl".split())]
+    ws = [
+        Word(i, i + 0.4, " " + t)
+        for i, t in enumerate(["Python", "Pizza", "Istanbul.", "Python,", "Django,", "the", "little", "girl"])
+    ]
     out = drop_prompt_echo(ws, "Today's speakers are X. Python Pizza Istanbul. Python, Django, FastAPI.")
     assert [w.text.strip() for w in out] == ["the", "little", "girl"]
-    ws2 = [Word(i, i + 0.4, " " + t) for i, t in enumerate("I love Python and Django".split())]
+    ws2 = [Word(i, i + 0.4, " " + t) for i, t in enumerate(["I", "love", "Python", "and", "Django"])]
     assert drop_prompt_echo(ws2, "Python Pizza Istanbul. Python, Django.") == ws2  # real speech is kept
 
 
@@ -109,7 +119,7 @@ def test_prompt_fragments_are_dropped_but_full_names_kept():
     assert is_prompt_fragment("PyI", prompt)
     assert not is_prompt_fragment("PyPI", prompt)
     assert is_prompt_fragment("Ultra Lysan", prompt)
-    assert not is_prompt_fragment("Django.", prompt)          # a full name said on its own
+    assert not is_prompt_fragment("Django.", prompt)  # a full name said on its own
     assert not is_prompt_fragment("PyIstanbul", prompt)
-    assert not is_prompt_fragment("Yes.", prompt)             # not part of any name
-    assert not is_prompt_fragment("PyI is great", prompt)     # more than two words: real speech
+    assert not is_prompt_fragment("Yes.", prompt)  # not part of any name
+    assert not is_prompt_fragment("PyI is great", prompt)  # more than two words: real speech

@@ -46,7 +46,7 @@ def test_already_committed_words_are_not_repeated():
     first = hb.flush()
     assert [w.text.strip() for w in first] == ["one", "two", "three"]
     # A new hypothesis re-transcribes the start of the buffer: the overlap must be dropped.
-    hb.insert(words("one", "two", "three", "four") )
+    hb.insert(words("one", "two", "three", "four"))
     hb.flush()
     hb.insert(words("one", "two", "three", "four"))
     again = hb.flush()
@@ -58,7 +58,7 @@ def test_online_asr_offsets_and_finish():
     o.reset(10.0)
     o.append(np.zeros(16000 * 2, dtype=np.float32))
     o.apply(ASRResult(words("a", "b", "c")))
-    committed, tentative = o.apply(ASRResult(words("a", "b", "d")))
+    committed, _tentative = o.apply(ASRResult(words("a", "b", "d")))
     assert [w.text.strip() for w in committed] == ["a", "b"]
     assert committed[0].start == 10.0  # buffer offset added
     tail = o.finish()
@@ -142,6 +142,9 @@ def test_split_sentences_for_sentence_level_translators():
 
     assert split_sentences("Did you tell her? I had to.") == ["Did you tell her?", "I had to."]
     assert split_sentences("Are you driving, Mr. Barnes?") == ["Are you driving, Mr. Barnes?"]
-    assert split_sentences("Kanuni'nin 30. yılında yapıldı. Çok güzel.") == ["Kanuni'nin 30. yılında yapıldı.", "Çok güzel."]
+    assert split_sentences("Kanuni'nin 30. yılında yapıldı. Çok güzel.") == [
+        "Kanuni'nin 30. yılında yapıldı.",
+        "Çok güzel.",
+    ]
     assert split_sentences("It costs 3.5 dollars") == ["It costs 3.5 dollars"]
     assert split_sentences("Running mate Oh, not just running mate") == ["Running mate Oh, not just running mate"]

@@ -313,7 +313,21 @@ def load_audio_file(path: str | Path) -> np.ndarray:
         if not shutil.which("ffmpeg"):
             raise RuntimeError(f"Cannot decode {path}; install ffmpeg (brew install ffmpeg) for this format")
         raw = subprocess.run(
-            ["ffmpeg", "-nostdin", "-v", "error", "-i", str(path), "-ac", "1", "-ar", str(TARGET_SR), "-f", "f32le", "-"],
+            [
+                "ffmpeg",
+                "-nostdin",
+                "-v",
+                "error",
+                "-i",
+                str(path),
+                "-ac",
+                "1",
+                "-ar",
+                str(TARGET_SR),
+                "-f",
+                "f32le",
+                "-",
+            ],
             check=True,
             capture_output=True,
         ).stdout

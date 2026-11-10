@@ -18,6 +18,7 @@ from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from typing import ClassVar
 
 import numpy as np
 
@@ -26,10 +27,10 @@ from . import schedule as sched
 from .audio import AudioCapture, DeviceWatcher, FilePlayer, list_input_devices, load_audio_file, mic_permission
 from .config import Settings, SettingsStore, mt_for
 from .engine import Interim, StreamEngine, other
-from .streaming import SAMPLE_RATE, Clause
-from .transcript import TranscriptLog
 from .gender import neutralize
 from .names import NameCorrector
+from .streaming import SAMPLE_RATE, Clause
+from .transcript import TranscriptLog
 from .translate import check_translation
 from .workers import WorkerClient, WorkerError
 
@@ -270,7 +271,9 @@ class Pipeline:
             self.player.stop()
         self.source = "file"
         self.file_name = str(path)
-        self.player = FilePlayer(audio, self._on_audio, speed=speed, on_done=lambda: self.event("info", f"file finished: {path}"))
+        self.player = FilePlayer(
+            audio, self._on_audio, speed=speed, on_done=lambda: self.event("info", f"file finished: {path}")
+        )
         self.running = True
         self.player.start()
         self.event("info", f"playing {path} ({len(audio) / SAMPLE_RATE:.0f} s, speed {speed}x)")
@@ -299,10 +302,14 @@ class Pipeline:
         mt_changes = {k: changes.pop(k) for k in ("mt_model", "mt_model_en_tr", "mt_model_tr_en") if k in changes}
         if asr_change:
             cur = self.store.value
-            self.switch_model("asr", asr_change.get("asr_model", cur.asr_model), asr_change.get("asr_audio_ctx", cur.asr_audio_ctx))
+            self.switch_model(
+                "asr", asr_change.get("asr_model", cur.asr_model), asr_change.get("asr_audio_ctx", cur.asr_audio_ctx)
+            )
         for key, model in mt_changes.items():
             if model:
-                self.switch_model({"mt_model": "mt", "mt_model_en_tr": "mt_en_tr", "mt_model_tr_en": "mt_tr_en"}[key], model)
+                self.switch_model(
+                    {"mt_model": "mt", "mt_model_en_tr": "mt_en_tr", "mt_model_tr_en": "mt_tr_en"}[key], model
+                )
         old = self.store.value
         s = self.store.update(**changes)
         if "device_name" in changes or "channel" in changes:
@@ -366,7 +373,11 @@ class Pipeline:
         return ", ".join(f"{a.upper()}→{b.upper()}" for a, b in self.DIRECTIONS if mt_for(s, a, b) == model)
 
     # Hot swap -----------------------------------------------------------------------
-    MT_KINDS = {"mt": DIRECTIONS, "mt_en_tr": (("en", "tr"),), "mt_tr_en": (("tr", "en"),)}
+    MT_KINDS: ClassVar[dict[str, tuple[tuple[str, str], ...]]] = {
+        "mt": DIRECTIONS,
+        "mt_en_tr": (("en", "tr"),),
+        "mt_tr_en": (("tr", "en"),),
+    }
 
     def switch_model(self, kind: str, model: str, audio_ctx: str | None = None) -> None:
         """Load a new model in a fresh worker while the current one keeps working, then swap.
@@ -391,7 +402,11 @@ class Pipeline:
                 self._mt_assign(kind, model)  # already loaded for the other direction
                 return
         self.switching[kind] = model
-        what = "speech recognition" if kind == "asr" else "translation" + ("" if kind == "mt" else f" ({kind[3:5].upper()}→{kind[6:].upper()})")
+        what = (
+            "speech recognition"
+            if kind == "asr"
+            else "translation" + ("" if kind == "mt" else f" ({kind[3:5].upper()}→{kind[6:].upper()})")
+        )
         self.event("info", f"loading {model} for {what}; the current model keeps running until it is ready")
         threading.Thread(target=self._switch_worker, args=(kind, spec), name=f"switch-{kind}", daemon=True).start()
 
@@ -526,8 +541,10 @@ class Pipeline:
         if not self.asr.poll():
             return None
         try:
-            res = self.asr.call({"op": "transcribe", "audio": audio, "language": lang, "prompt": prompt},
-                                timeout=max(8.0, 2 * len(audio) / SAMPLE_RATE))
+            res = self.asr.call(
+                {"op": "transcribe", "audio": audio, "language": lang, "prompt": prompt},
+                timeout=max(8.0, 2 * len(audio) / SAMPLE_RATE),
+            )
         except WorkerError as exc:
             self.event("error", str(exc))
             return None
@@ -536,8 +553,15 @@ class Pipeline:
 
     def _on_interim(self, it: Interim) -> None:
         text, _ = self._names.correct(it.text)
-        job = MTJob("interim", text, it.lang, other(it.lang), it.base,
-                    end_mono=self.stream_to_mono(it.end_t), session=self._session_title())
+        job = MTJob(
+            "interim",
+            text,
+            it.lang,
+            other(it.lang),
+            it.base,
+            end_mono=self.stream_to_mono(it.end_t),
+            session=self._session_title(),
+        )
         with self._mt_lock:
             self._mt_interim = job
             self._mt_lock.notify()
@@ -547,9 +571,19 @@ class Pipeline:
 
     def _on_clause(self, clause: Clause, src: str, seq: int) -> None:
         text, corrections = self._names.correct(clause.text)  # misheard program names
-        job = MTJob("confirmed", text, src, other(src), seq, clause.start, clause.end,
-                    self.stream_to_mono(clause.end), session=self._session_title(), reason=clause.reason,
-                    corrections=corrections)
+        job = MTJob(
+            "confirmed",
+            text,
+            src,
+            other(src),
+            seq,
+            clause.start,
+            clause.end,
+            self.stream_to_mono(clause.end),
+            session=self._session_title(),
+            reason=clause.reason,
+            corrections=corrections,
+        )
         with self._mt_lock:
             self._mt_confirmed.append(job)
             self._mt_lock.notify()
@@ -601,8 +635,12 @@ class Pipeline:
         if worker is None:
             return None
         job.model = model
-        req = {"text": job.text, "src": job.src, "tgt": job.tgt,
-               "protect": hints.protected_names(self.sessions)}  # program names stay untranslated
+        req = {
+            "text": job.text,
+            "src": job.src,
+            "tgt": job.tgt,
+            "protect": hints.protected_names(self.sessions),
+        }  # program names stay untranslated
         try:
             res = worker.call(req, timeout=timeout)
         except WorkerError as exc:
@@ -633,22 +671,24 @@ class Pipeline:
         self.m_delay_confirmed.add(time.monotonic() - job.end_mono)
         s = self.store.value
         try:
-            self.transcript.append({
-                "start": self.mono_to_wall(self.stream_to_mono(job.start_t)),
-                "end": self.mono_to_wall(job.end_mono),
-                "src": job.src,
-                "tgt": job.tgt,
-                "mode": s.spoken_language,
-                "session": job.session,
-                "source": job.text,
-                "translation": text,
-                "fallback": fallback,
-                "corrections": job.corrections,
-                "cut": job.reason,
-                "delay_s": round(time.monotonic() - job.end_mono, 2),
-                "asr_model": s.asr_model,
-                "mt_model": job.model or mt_for(s, job.src, job.tgt),
-            })
+            self.transcript.append(
+                {
+                    "start": self.mono_to_wall(self.stream_to_mono(job.start_t)),
+                    "end": self.mono_to_wall(job.end_mono),
+                    "src": job.src,
+                    "tgt": job.tgt,
+                    "mode": s.spoken_language,
+                    "session": job.session,
+                    "source": job.text,
+                    "translation": text,
+                    "fallback": fallback,
+                    "corrections": job.corrections,
+                    "cut": job.reason,
+                    "delay_s": round(time.monotonic() - job.end_mono, 2),
+                    "asr_model": s.asr_model,
+                    "mt_model": job.model or mt_for(s, job.src, job.tgt),
+                }
+            )
         except Exception:
             log.exception("transcript write")
 
@@ -682,8 +722,15 @@ class Pipeline:
                     last_mem = now
                     self._memory_check()
                 level = self.player.level if (self.source == "file" and self.player) else self.capture.level
-                self.publish("control", {"type": "level", "rms_db": round(level.rms_db, 1), "peak_db": round(level.peak_db, 1),
-                                         "speech": self.engine.gate.in_speech})
+                self.publish(
+                    "control",
+                    {
+                        "type": "level",
+                        "rms_db": round(level.rms_db, 1),
+                        "peak_db": round(level.peak_db, 1),
+                        "speech": self.engine.gate.in_speech,
+                    },
+                )
                 if now - last_status >= 0.5:
                     last_status = now
                     self.publish("control", self.status())
@@ -717,8 +764,11 @@ class Pipeline:
             w.status.rss_mb = w.rss_mb()
             limit = self._memory_limit_mb(w)
             if w.status.rss_mb and w.status.rss_mb > limit and key not in self._reload:
-                self.event("warn", f"{w.name} worker uses {w.status.rss_mb:.0f} MB (limit {limit:.0f}, "
-                                   f"{w.status.baseline_mb or 0:.0f} MB after loading); restarting it")
+                self.event(
+                    "warn",
+                    f"{w.name} worker uses {w.status.rss_mb:.0f} MB (limit {limit:.0f}, "
+                    f"{w.status.baseline_mb or 0:.0f} MB after loading); restarting it",
+                )
                 self._reload.add(key)
 
     def reload_schedule(self) -> None:
@@ -729,7 +779,12 @@ class Pipeline:
     def keeping_up(self) -> bool:
         recent_skip = self.last_skip is not None and time.monotonic() - self.last_skip < 60
         mean = self.m_asr_ms.mean() or 0
-        return not recent_skip and self.backlog_s < 2.0 and mean / 1000 < 0.9 * max(self.engine.step, 0.2) and len(self._mt_confirmed) < 3
+        return (
+            not recent_skip
+            and self.backlog_s < 2.0
+            and mean / 1000 < 0.9 * max(self.engine.step, 0.2)
+            and len(self._mt_confirmed) < 3
+        )
 
     def status(self) -> dict:
         def r(x, n=2):
@@ -771,9 +826,11 @@ class Pipeline:
             "delay_interim_p95": r(self.m_delay_interim.p(0.95)),
             "delay_confirmed_p50": r(self.m_delay_confirmed.p(0.5)),
             "delay_confirmed_p95": r(self.m_delay_confirmed.p(0.95)),
-            "workers": [{**self.asr.status.as_dict(), "label": "Speech recognition"}] + [
+            "workers": [{**self.asr.status.as_dict(), "label": "Speech recognition"}]
+            + [
                 {**w.status.as_dict(), "label": f"Translation {self._mt_dirs(m)}", "model": m}
-                for m, w in list(self.mt_pool.items())],
+                for m, w in list(self.mt_pool.items())
+            ],
             "switching": dict(self.switching),
             "session": self._session_dict(self.current_session),
             "next_session": self._session_dict(self.next_session),
@@ -786,7 +843,13 @@ class Pipeline:
     def _session_dict(x: sched.Session | None) -> dict | None:
         if not x:
             return None
-        return {"start": x.start[11:16], "end": (x.end or "")[11:16], "title": x.title, "speaker": x.speaker, "lang": x.lang}
+        return {
+            "start": x.start[11:16],
+            "end": (x.end or "")[11:16],
+            "title": x.title,
+            "speaker": x.speaker,
+            "lang": x.lang,
+        }
 
     def health(self) -> dict:
         return {
@@ -798,4 +861,3 @@ class Pipeline:
             "mt": "ready" if self.mt_ready else ", ".join(w.status.state for w in self.mt_pool.values()),
             "delay_confirmed_p50": self.m_delay_confirmed.p(0.5),
         }
-

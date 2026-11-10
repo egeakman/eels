@@ -24,7 +24,9 @@ def setup_logging(verbose: bool = False) -> None:
     fmt = logging.Formatter("%(asctime)s %(levelname)-7s %(name)s: %(message)s", "%H:%M:%S")
     root = logging.getLogger()
     root.setLevel(logging.DEBUG if verbose else logging.INFO)
-    fh = logging.handlers.TimedRotatingFileHandler(LOG_DIR / "live-translate.log", when="midnight", backupCount=14, encoding="utf-8")
+    fh = logging.handlers.TimedRotatingFileHandler(
+        LOG_DIR / "live-translate.log", when="midnight", backupCount=14, encoding="utf-8"
+    )
     fh.setFormatter(fmt)
     root.addHandler(fh)
     sh = logging.StreamHandler(sys.stderr)
@@ -90,7 +92,9 @@ def cmd_run(args) -> int:
 
     # Keep the Mac awake (display, idle and system sleep) for as long as we run.
     try:
-        subprocess.Popen(["caffeinate", "-dimsu", "-w", str(os.getpid())], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(
+            ["caffeinate", "-dimsu", "-w", str(os.getpid())], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
     except Exception:
         print("Warning: could not start caffeinate; disable sleep in System Settings.")
 
@@ -100,6 +104,7 @@ def cmd_run(args) -> int:
     pipeline.boot()
 
     if args.play:
+
         def play_when_ready():
             print("Loading models before playing the file...", flush=True)
             while not (pipeline.asr.ready and pipeline.mt_ready):
@@ -110,7 +115,9 @@ def cmd_run(args) -> int:
     elif not args.no_autostart:
         pipeline.start()
 
-    config = uvicorn.Config(app, host="0.0.0.0", port=PORT, log_level="warning", ws_ping_interval=20, ws_ping_timeout=20)
+    config = uvicorn.Config(
+        app, host="0.0.0.0", port=PORT, log_level="warning", ws_ping_interval=20, ws_ping_timeout=20
+    )
     server = uvicorn.Server(config)
 
     def announce():
@@ -189,8 +196,22 @@ def prepare_hymt(names: list[str]) -> None:
         repo = f"tencent/HY-MT1.5-{size}"
         print(f"Downloading and converting {repo} to MLX {bits}-bit ...", flush=True)
         snapshot_download(repo)
-        subprocess.run([sys.executable, "-m", "mlx_lm", "convert", "--hf-path", repo, "--mlx-path", str(out),
-                        "-q", "--q-bits", str(bits)], check=True)
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "mlx_lm",
+                "convert",
+                "--hf-path",
+                repo,
+                "--mlx-path",
+                str(out),
+                "-q",
+                "--q-bits",
+                str(bits),
+            ],
+            check=True,
+        )
         for r in scan_cache_dir().repos:
             if r.repo_id == repo:
                 shutil.rmtree(r.repo_path, ignore_errors=True)  # the converted copy is all we use
@@ -204,7 +225,9 @@ def cmd_export_srt(args) -> int:
     if not records:
         print(f"No transcript for {day}.")
         return 1
-    srt = export_srt(records, parse_clock(day, args.start), parse_clock(day, args.end), text=args.text, offset_s=args.offset)
+    srt = export_srt(
+        records, parse_clock(day, args.start), parse_clock(day, args.end), text=args.text, offset_s=args.offset
+    )
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:
             f.write(srt)
@@ -257,10 +280,15 @@ def main(argv: list[str] | None = None) -> int:
     pl.set_defaults(func=lambda a: cmd_run(argparse.Namespace(**{**vars(a), "play": a.file})))
 
     d = sub.add_parser("download-models", help="download models so the app works offline")
-    d.add_argument("--all", action="store_true",
-                   help="also get the candidates worth comparing on the event Mac (about 19 GB)")
-    d.add_argument("--include", nargs="*", metavar="CANDIDATE",
-                   help="extra benchmark candidates, e.g. tg27b medium-750 (see bench/candidates.py)")
+    d.add_argument(
+        "--all", action="store_true", help="also get the candidates worth comparing on the event Mac (about 19 GB)"
+    )
+    d.add_argument(
+        "--include",
+        nargs="*",
+        metavar="CANDIDATE",
+        help="extra benchmark candidates, e.g. tg27b medium-750 (see bench/candidates.py)",
+    )
     d.set_defaults(func=cmd_download_models)
 
     e = sub.add_parser("export-srt", help="export subtitles for a time range as SRT")

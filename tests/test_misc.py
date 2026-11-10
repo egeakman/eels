@@ -20,7 +20,11 @@ AGENDA = """
 
 def test_parse_agenda_and_current_session():
     sessions = sched.parse_agenda(AGENDA)
-    assert [(s.lang, s.title) for s in sessions] == [(None, "Registration"), ("en", "Keynote"), ("tr", "LazyTown: Hızlı ve Tembel")]
+    assert [(s.lang, s.title) for s in sessions] == [
+        (None, "Registration"),
+        ("en", "Keynote"),
+        ("tr", "LazyTown: Hızlı ve Tembel"),
+    ]
     assert sessions[1].speaker == "Ada Lovelace"
     assert sessions[0].spoken == "auto"
     cur, nxt = sched.current_and_next(sessions, datetime.fromisoformat("2026-11-14T11:20:00+03:00"))
@@ -40,8 +44,17 @@ def test_transcript_and_srt(tmp_path):
     day = date(2026, 11, 14)
     a = parse_clock(day, "11:15:02")
     log.append({"start": a, "end": parse_clock(day, "11:15:04"), "source": "Hello", "translation": "Merhaba"})
-    log.append({"start": parse_clock(day, "11:15:03"), "end": parse_clock(day, "11:15:06"), "source": "world", "translation": "dünya"})
-    log.append({"start": parse_clock(day, "12:00:00"), "end": parse_clock(day, "12:00:02"), "source": "x", "translation": "y"})
+    log.append(
+        {
+            "start": parse_clock(day, "11:15:03"),
+            "end": parse_clock(day, "11:15:06"),
+            "source": "world",
+            "translation": "dünya",
+        }
+    )
+    log.append(
+        {"start": parse_clock(day, "12:00:00"), "end": parse_clock(day, "12:00:02"), "source": "x", "translation": "y"}
+    )
     recs = log.read(day)
     assert len(recs) == 3
     srt = export_srt(recs, parse_clock(day, "11:15"), parse_clock(day, "11:40"), text="both", offset_s=1.0)
@@ -53,8 +66,14 @@ def test_transcript_and_srt(tmp_path):
 def test_translation_guards():
     assert check_translation("Hello everyone, welcome.", "", "tr") == "empty"
     assert check_translation("Hello everyone, welcome to the talk.", "Merhaba", "tr").startswith("length")
-    assert check_translation("Merhaba arkadaşlar nasılsınız", "Merhaba arkadaşlar, ışığı açın", "en") == "output looks Turkish"
-    assert check_translation("email address from a log file.", "电子邮件地址 bir dosyadan.", "tr") == "non-Latin script in output"
+    assert (
+        check_translation("Merhaba arkadaşlar nasılsınız", "Merhaba arkadaşlar, ışığı açın", "en")
+        == "output looks Turkish"
+    )
+    assert (
+        check_translation("email address from a log file.", "电子邮件地址 bir dosyadan.", "tr")
+        == "non-Latin script in output"
+    )
     assert check_translation("Thank you very much.", "Çok teşekkür ederim.", "tr") is None
     assert check_translation("İstanbul'da çok güzel bir gün.", "A beautiful day in Istanbul.", "en") is None
 

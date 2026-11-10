@@ -17,8 +17,22 @@ AUDIO_DIR = VAR_DIR / "bench-audio"
 SOURCES = [
     ("tr_meetup72", "tr", "PgWe6qsfx4I", "08:00", "13:00", "Python Istanbul MeetUp 72 (Turkish, room audio)"),
     ("tr_meetup66", "tr", "IOKtAMFrkoQ", "12:00", "17:00", "Python Istanbul MeetUp, Python Saati #66 (Turkish)"),
-    ("en_pizza_music", "en", "qJraRfZoXjI", "01:00", "06:00", "Python Pizza Hamburg 2021, GPT and music (non-native English)"),
-    ("en_pycon_shaw", "en", "Mp5wKOL4L2Q", "05:00", "10:00", "PyCon US 2024, Anthony Shaw, subinterpreters (native English)"),
+    (
+        "en_pizza_music",
+        "en",
+        "qJraRfZoXjI",
+        "01:00",
+        "06:00",
+        "Python Pizza Hamburg 2021, GPT and music (non-native English)",
+    ),
+    (
+        "en_pycon_shaw",
+        "en",
+        "Mp5wKOL4L2Q",
+        "05:00",
+        "10:00",
+        "PyCon US 2024, Anthony Shaw, subinterpreters (native English)",
+    ),
 ]
 
 
@@ -39,14 +53,25 @@ def main(args=None) -> int:
             continue
         print(f"fetching {name}: {desc} [{start}-{end}]", flush=True)
         cmd = [
-            "uvx", "yt-dlp", f"https://www.youtube.com/watch?v={vid}",
-            "-f", "bestaudio", "--download-sections", f"*{start}-{end}",
-            "-x", "--audio-format", "wav",
-            "--postprocessor-args", "ffmpeg:-ac 1 -ar 16000",
-            "-o", str(AUDIO_DIR / f"{name}.%(ext)s"),
-            "--no-playlist", "--quiet", "--no-warnings",
+            "uvx",
+            "yt-dlp",
+            f"https://www.youtube.com/watch?v={vid}",
+            "-f",
+            "bestaudio",
+            "--download-sections",
+            f"*{start}-{end}",
+            "-x",
+            "--audio-format",
+            "wav",
+            "--postprocessor-args",
+            "ffmpeg:-ac 1 -ar 16000",
+            "-o",
+            str(AUDIO_DIR / f"{name}.%(ext)s"),
+            "--no-playlist",
+            "--quiet",
+            "--no-warnings",
         ]
-        r = subprocess.run(cmd)
+        r = subprocess.run(cmd, check=False)
         if r.returncode == 0 and out.exists():
             ok += 1
         else:

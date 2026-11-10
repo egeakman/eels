@@ -14,7 +14,11 @@ ASR_OPTIONS = [
     ("mlx-community/whisper-large-v3-turbo", "full", "Whisper large-v3-turbo, 30 s window (about 2x slower)"),
     ("mlx-community/whisper-medium-mlx", "750", "Whisper medium (no faster than turbo, weaker Turkish)"),
     ("mlx-community/whisper-small-mlx", "750", "Whisper small (about 3x faster, many more Turkish errors)"),
-    ("mlx-community/whisper-large-v3-mlx", "750", "Whisper large-v3, 15 s window (too slow on the Air; try on the Pro)"),
+    (
+        "mlx-community/whisper-large-v3-mlx",
+        "750",
+        "Whisper large-v3, 15 s window (too slow on the Air; try on the Pro)",
+    ),
     ("mlx-community/whisper-large-v3-mlx", "full", "Whisper large-v3, 30 s window (slowest, most accurate Whisper)"),
 ]
 

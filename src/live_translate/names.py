@@ -34,6 +34,8 @@ def different_word(key: str, name_key: str) -> bool:
     """One contains the other: a different word, not a misspelling ("istanbul" vs "pyistanbul",
     "adjangogirls" vs "djangogirls")."""
     return key != name_key and (key in name_key or name_key in key)
+
+
 _TAIL = re.compile(r"^(.*?)((?:['’]\w+)?)([.,!?;:…\"”)]*)$")
 
 

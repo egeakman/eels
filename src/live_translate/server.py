@@ -86,7 +86,14 @@ def create_app(hub: Hub, pipeline: Pipeline) -> FastAPI:
         return transcripts.days()
 
     @app.get("/api/srt")
-    async def srt(request: Request, day: str, start: str = "00:00", end: str = "23:59:59", text: str = "translation", offset: float = 0.0):
+    async def srt(
+        request: Request,
+        day: str,
+        start: str = "00:00",
+        end: str = "23:59:59",
+        text: str = "translation",
+        offset: float = 0.0,
+    ):
         require_local(request)
         try:
             d = date.fromisoformat(day)
@@ -97,7 +104,9 @@ def create_app(hub: Hub, pipeline: Pipeline) -> FastAPI:
             raise HTTPException(400, "text must be translation, source or both")
         body = export_srt(transcripts.read(d), a, b, text=text, offset_s=offset)
         name = f"subtitles_{day}_{start.replace(':', '')}-{end.replace(':', '')}_{text}.srt"
-        return PlainTextResponse(body, media_type="application/x-subrip", headers={"Content-Disposition": f'attachment; filename="{name}"'})
+        return PlainTextResponse(
+            body, media_type="application/x-subrip", headers={"Content-Disposition": f'attachment; filename="{name}"'}
+        )
 
     async def pump(ws: WebSocket, q: asyncio.Queue) -> None:
         while True:
@@ -129,7 +138,9 @@ def create_app(hub: Hub, pipeline: Pipeline) -> FastAPI:
         hub.clients["control"].add(q)
         q.put_nowait(json.dumps(pipeline.status(), ensure_ascii=False))
         q.put_nowait(json.dumps({"type": "devices", "devices": list_input_devices()}))
-        q.put_nowait(json.dumps({"type": "schedule", "sessions": [s.__dict__ for s in pipeline.sessions]}, ensure_ascii=False))
+        q.put_nowait(
+            json.dumps({"type": "schedule", "sessions": [s.__dict__ for s in pipeline.sessions]}, ensure_ascii=False)
+        )
         sender = asyncio.create_task(pump(ws, q))
         try:
             while True:
@@ -179,7 +190,11 @@ def create_app(hub: Hub, pipeline: Pipeline) -> FastAPI:
             sessions = sched.fetch_agenda()
             sched.save(sessions, sched.OVERRIDE)
             pipeline.reload_schedule()
-            return {"type": "schedule", "sessions": [s.__dict__ for s in pipeline.sessions], "msg": f"{len(sessions)} sessions loaded"}
+            return {
+                "type": "schedule",
+                "sessions": [s.__dict__ for s in pipeline.sessions],
+                "msg": f"{len(sessions)} sessions loaded",
+            }
         else:
             return {"type": "error", "msg": f"unknown command {cmd!r}"}
         return {"type": "ok", "cmd": cmd}

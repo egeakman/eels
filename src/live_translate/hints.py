@@ -85,8 +85,13 @@ def _asr_hint(lang: str, sessions, current=None, nxt=None) -> str:
     for sess in (current, nxt):
         if sess and sess.lang:
             who = sess.speaker if sess.speaker and len(sess.speaker) < 60 else ""
-            parts.append(f"{who} anlatıyor: {sess.title}." if tr and who else
-                         f"{sess.title}, by {who}." if who else f"{sess.title}.")
+            parts.append(
+                f"{who} anlatıyor: {sess.title}."
+                if tr and who
+                else f"{sess.title}, by {who}."
+                if who
+                else f"{sess.title}."
+            )
             terms += talk_terms(sess.title)
     terms = list(dict.fromkeys(terms + _terms()["always"]))
     parts.append(("Terimler: " if tr else "Terms: ") + ", ".join(terms) + ".")
