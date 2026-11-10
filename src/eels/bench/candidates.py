@@ -1,6 +1,6 @@
-from pathlib import Path
-
 """Models the benchmark compares. Names are used on the command line."""
+
+from ..config import MODEL_DIR
 
 ASR = {
     # name: (worker spec, note)
@@ -40,11 +40,11 @@ MT = {
         "Opus-MT tc-big on the CPU, beam search 4 (slower, maybe better)",
     ),
     "hymt1.8b": (
-        {"model": str(Path.home() / ".cache/live-translate/HY-MT1.5-1.8B-mlx-8bit")},
+        {"model": str(MODEL_DIR / "HY-MT1.5-1.8B-mlx-8bit")},
         "Tencent HY-MT1.5 1.8B, MLX 8-bit",
     ),
     "hymt7b": (
-        {"model": str(Path.home() / ".cache/live-translate/HY-MT1.5-7B-mlx-4bit")},
+        {"model": str(MODEL_DIR / "HY-MT1.5-7B-mlx-4bit")},
         "Tencent HY-MT1.5 7B, MLX 4-bit (faster)",
     ),
     "tg27b": ({"model": "mlx-community/translategemma-27b-it-4bit"}, "TranslateGemma 27B 4-bit (about 16 GB)"),

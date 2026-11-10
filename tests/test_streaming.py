@@ -1,6 +1,6 @@
 import numpy as np
 
-from live_translate.streaming import (
+from eels.streaming import (
     ASRResult,
     ClauseSegmenter,
     HypothesisBuffer,
@@ -138,7 +138,7 @@ def test_turkish_ordinals_and_abbreviations_do_not_end_sentences():
 
 
 def test_split_sentences_for_sentence_level_translators():
-    from live_translate.streaming import split_sentences
+    from eels.streaming import split_sentences
 
     assert split_sentences("Did you tell her? I had to.") == ["Did you tell her?", "I had to."]
     assert split_sentences("Are you driving, Mr. Barnes?") == ["Are you driving, Mr. Barnes?"]

@@ -60,7 +60,7 @@ def create_app(hub: Hub, pipeline: Pipeline) -> FastAPI:
         yield
         hub.loop = None
 
-    app = FastAPI(title="live-translate", lifespan=lifespan, docs_url=None, redoc_url=None)
+    app = FastAPI(title="eels", lifespan=lifespan, docs_url=None, redoc_url=None)
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
     def require_local(request: Request) -> None:

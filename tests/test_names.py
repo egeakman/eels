@@ -1,4 +1,4 @@
-from live_translate.names import NameCorrector
+from eels.names import NameCorrector
 
 NAMES = ["Lysandros Nikolaou", "PyIstanbul", "Celery", "Ultralytics", "Şuayip Üzülmez", "Django", "Raspberry Pi Pico"]
 

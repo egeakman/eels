@@ -1,4 +1,4 @@
-# live-translate: notes for agents
+# eels: notes for agents
 
 Live EN<->TR subtitles for Python Pizza Istanbul (Sat 14 Nov 2026), a 1920x180 transparent OBS browser source, offline on one Mac. Usage: `README.md`. Measurements, decisions, open questions: `docs/findings/FINDINGS.md`.
 
@@ -10,19 +10,19 @@ Live EN<->TR subtitles for Python Pizza Istanbul (Sat 14 Nov 2026), a 1920x180 t
 ## Commands
 
 ```sh
-uv sync                                          # Python 3.13 pinned
-uv run pytest                                    # no models needed
-uv run live-translate                            # control panel: http://localhost:8000/control
-uv run live-translate play FILE
-uv run live-translate download-models [--all]
-uv run live-translate fetch-bench-audio
-uv run live-translate benchmark ...              # reports copied to docs/findings/benchmarks/
-uv run python -m live_translate.bench.captioned fetch|run --asr ... --mt ...
+uv sync                       # Python 3.13 pinned
+uv run pytest                 # no models needed
+uv run eels                   # control panel: http://localhost:8000/control
+uv run eels play FILE
+uv run eels download-models [--all]
+uv run eels fetch-bench-audio
+uv run eels benchmark ...     # reports copied to docs/findings/benchmarks/
+uv run python -m eels.bench.captioned fetch|run --asr ... --mt ...
 ```
 
 ## Do not undo
 
-- **MLX buffer cache** grows up to ~RAM per process (swapped a 16 GB Mac to 48 GB). Workers cap it at 512 MB (`LIVE_TRANSLATE_MLX_CACHE_MB`); no speed cost.
+- **MLX buffer cache** grows up to ~RAM per process (swapped a 16 GB Mac to 48 GB). Workers cap it at 512 MB (`EELS_MLX_CACHE_MB`); no speed cost.
 - **Whisper copies its prompt's style.** Ellipses spiralled into "..." subtitles; a bare name list dropped periods and Title-Cased Turkish. Prompts are punctuated sentences, ellipses stripped, context cleared after ~8 s of speech with no words.
 - **Whisper puts a period at every pause.** Those words are `soft_end` and don't end a sentence if speech continues.
 - **Timing uses audio capture time**, not processing time.

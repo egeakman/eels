@@ -1,9 +1,9 @@
 """Benchmark speech recognition and translation candidates on this Mac.
 
-  uv run live-translate benchmark                 # everything with defaults
-  uv run live-translate benchmark --mt            # all MT candidates only
-  uv run live-translate benchmark --asr turbo-750 turbo-full
-  uv run live-translate benchmark --pipeline turbo-750+tg4b --soak 30
+  uv run eels benchmark                 # everything with defaults
+  uv run eels benchmark --mt            # all MT candidates only
+  uv run eels benchmark --asr turbo-750 turbo-full
+  uv run eels benchmark --pipeline turbo-750+tg4b --soak 30
 
 Results go to var/bench/<timestamp>/ (report.md, results.json, mt_review.md).
 """
@@ -336,14 +336,14 @@ def run_asr(names: list[str], quick: bool, out: dict) -> None:
 
     data = clips(quick)
     if not data:
-        print("No benchmark audio. Run `uv run live-translate fetch-bench-audio` first.")
+        print("No benchmark audio. Run `uv run eels fetch-bench-audio` first.")
         return
     refs = {name: reference_text(name, lang, audio, quick) for name, lang, audio in data}
     results = out.setdefault("asr", {})
     for cand in names:
         spec, note = candidates.ASR[cand]
         print(f"ASR {cand}: {note}", flush=True)
-        worker = start_worker("asr", "live_translate.asr:create", spec)
+        worker = start_worker("asr", "eels.asr:create", spec)
         load = worker.status.info.get("load_s")
         per_clip = {}
         for name, lang, audio in data:
@@ -381,7 +381,7 @@ def run_mt(names: list[str], out: dict) -> None:
     for cand in names:
         spec, note = candidates.MT[cand]
         print(f"MT {cand}: {note}", flush=True)
-        worker = start_worker("mt", "live_translate.translate:create", spec)
+        worker = start_worker("mt", "eels.translate:create", spec)
         hyps, times = [], []
         rejected = 0
         for row in rows:
@@ -428,7 +428,7 @@ def run_pipeline(pairs: list[str], soak_min: float, out: dict, out_dir: Path) ->
 
     data = clips(quick=True)  # 90 s excerpts per clip keep this part short
     if not data:
-        print("No benchmark audio. Run `uv run live-translate fetch-bench-audio` first.")
+        print("No benchmark audio. Run `uv run eels fetch-bench-audio` first.")
         return
     results = out.setdefault("pipeline", {})
     for pair in pairs:

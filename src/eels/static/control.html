@@ -433,7 +433,7 @@
     }
     const missing = [...catalog.asr, ...catalog.mt].some(o => !o.available);
     $("m-note").textContent = "The new model loads while the current one keeps running, then they swap. Subtitles do not pause."
-      + (missing ? " To use a model marked not downloaded, run `uv run live-translate download-models --all` while online." : "");
+      + (missing ? " To use a model marked not downloaded, run `uv run eels download-models --all` while online." : "");
   }
   for (const kind of KINDS) {
     $(`m-${kind}`).onchange = e => {

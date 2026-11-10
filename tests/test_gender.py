@@ -1,4 +1,4 @@
-from live_translate.gender import neutralize
+from eels.gender import neutralize
 
 
 def test_examples_from_the_test_session():

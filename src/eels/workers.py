@@ -93,8 +93,8 @@ def _worker_main(factory: str, spec: dict, req_q, resp_q, parent_pid: int = 0) -
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     if parent_pid:
         _exit_with_parent(parent_pid)
-    # LIVE_TRANSLATE_MLX_CACHE_MB overrides the cap; 0 keeps MLX's default (the memory limit).
-    cache_mb = int(os.environ.get("LIVE_TRANSLATE_MLX_CACHE_MB", MLX_CACHE_LIMIT // 2**20))
+    # EELS_MLX_CACHE_MB overrides the cap; 0 keeps MLX's default (the memory limit).
+    cache_mb = int(os.environ.get("EELS_MLX_CACHE_MB", MLX_CACHE_LIMIT // 2**20))
     if cache_mb > 0:
         try:
             import mlx.core as mx
@@ -179,7 +179,7 @@ class WorkerClient:
         self._proc = self._ctx.Process(
             target=_worker_main,
             args=(self.factory, self.spec, self._req_q, self._resp_q, os.getpid()),
-            name=f"live-translate-{self.name}",
+            name=f"eels-{self.name}",
             daemon=True,
         )
         self._ready = False

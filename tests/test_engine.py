@@ -2,9 +2,9 @@
 
 import numpy as np
 
-from live_translate.config import Settings
-from live_translate.engine import StreamEngine
-from live_translate.streaming import clean_prompt_text, has_content, looks_turkish
+from eels.config import Settings
+from eels.engine import StreamEngine
+from eels.streaming import clean_prompt_text, has_content, looks_turkish
 
 
 def make_engine(script, spoken="en"):
@@ -99,8 +99,8 @@ def test_looks_turkish_does_not_fire_on_english():
 
 
 def test_prompt_echo_at_utterance_start_is_dropped():
-    from live_translate.engine import drop_prompt_echo
-    from live_translate.streaming import Word
+    from eels.engine import drop_prompt_echo
+    from eels.streaming import Word
 
     ws = [
         Word(i, i + 0.4, " " + t)
@@ -113,7 +113,7 @@ def test_prompt_echo_at_utterance_start_is_dropped():
 
 
 def test_prompt_fragments_are_dropped_but_full_names_kept():
-    from live_translate.engine import is_prompt_fragment
+    from eels.engine import is_prompt_fragment
 
     prompt = "Terms: PyIstanbul, PyPI, Django, Ultralytics. Today's speakers are Lysandros Nikolaou."
     assert is_prompt_fragment("PyI", prompt)

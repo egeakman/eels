@@ -16,19 +16,19 @@ DATA_DIR = PACKAGE_DIR / "data"
 
 
 def _find_var_dir() -> Path:
-    env = os.environ.get("LIVE_TRANSLATE_VAR")
+    env = os.environ.get("EELS_VAR")
     if env:
         return Path(env).expanduser().resolve()
-    # Repo checkout: <repo>/src/live_translate -> <repo>/var
+    # Repo checkout: <repo>/src/eels -> <repo>/var
     repo = PACKAGE_DIR.parent.parent
     if (repo / "pyproject.toml").exists():
         return repo / "var"
-    return Path.home() / "Library" / "Application Support" / "live-translate"
+    return Path.home() / "Library" / "Application Support" / "eels"
 
 
 VAR_DIR = _find_var_dir()
 # Converted models (Opus-MT in CTranslate2 format) are not per-run data; keep them next to the HF cache.
-MODEL_DIR = Path(os.environ.get("LIVE_TRANSLATE_MODELS", Path.home() / ".cache" / "live-translate")).expanduser()
+MODEL_DIR = Path(os.environ.get("EELS_MODELS", Path.home() / ".cache" / "eels")).expanduser()
 SETTINGS_PATH = VAR_DIR / "settings.json"
 # Tracked in git (unlike var/): benchmark reports and findings, so work on another Mac can build on them.
 FINDINGS_DIR = PACKAGE_DIR.parent.parent / "docs" / "findings"

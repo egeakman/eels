@@ -25,7 +25,7 @@ def setup_logging(verbose: bool = False) -> None:
     root = logging.getLogger()
     root.setLevel(logging.DEBUG if verbose else logging.INFO)
     fh = logging.handlers.TimedRotatingFileHandler(
-        LOG_DIR / "live-translate.log", when="midnight", backupCount=14, encoding="utf-8"
+        LOG_DIR / "eels.log", when="midnight", backupCount=14, encoding="utf-8"
     )
     fh.setFormatter(fmt)
     root.addHandler(fh)
@@ -79,10 +79,10 @@ def cmd_run(args) -> int:
     missing = models_present([s.asr_model, s.mt_model])
     if missing:
         print("These models are not downloaded yet:\n  " + "\n  ".join(missing))
-        print("Run `uv run live-translate download-models` while online, then start again.")
+        print("Run `uv run eels download-models` while online, then start again.")
         return 1
     if not port_free(PORT):
-        print(f"Port {PORT} is already in use. Is another copy of live-translate running? (lsof -i :{PORT})")
+        print(f"Port {PORT} is already in use. Is another copy of eels running? (lsof -i :{PORT})")
         return 1
 
     import uvicorn
@@ -179,7 +179,7 @@ def cmd_download_models(args) -> int:
 
 def prepare_hymt(names: list[str]) -> None:
     """Tencent HY-MT has no MLX build on Hugging Face: download, convert to MLX into
-    ~/.cache/live-translate/, then delete the original download (4 GB for 1.8B, 15 GB for 7B).
+    ~/.cache/eels/, then delete the original download (4 GB for 1.8B, 15 GB for 7B).
     1.8B is converted to 8-bit; 7B to 4-bit (about twice as fast, half the size)."""
     import shutil
 
@@ -261,7 +261,7 @@ def cmd_fetch_bench_audio(args) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="live-translate", description="Live EN<->TR subtitles for OBS.")
+    p = argparse.ArgumentParser(prog="eels", description="Live EN<->TR subtitles for OBS.")
     sub = p.add_subparsers(dest="command")
 
     def add_run_args(sp):
@@ -318,7 +318,7 @@ def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     commands = set(sub.choices)
     if not argv or (argv[0] not in commands and argv[0] not in ("-h", "--help")):
-        argv = ["run", *argv]  # `live-translate [options]` means `live-translate run [options]`
+        argv = ["run", *argv]  # `eels [options]` means `eels run [options]`
     args = p.parse_args(argv)
     return args.func(args) or 0
 

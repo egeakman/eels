@@ -1,5 +1,5 @@
 [project]
-name = "live-translate"
+name = "eels"
 version = "0.1.0"
 description = "Live EN<->TR subtitles for Python Pizza Istanbul, served as an OBS browser source"
 readme = "README.md"
@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.scripts]
-live-translate = "live_translate.cli:main"
+eels = "eels.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.13.6,<0.14.0"]

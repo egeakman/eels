@@ -1,4 +1,8 @@
-# live-translate
+# eels
+
+*"My hovercraft is full of eels."*
+
+The name comes from Monty Python's "Dirty Hungarian Phrasebook" sketch (1970), where a tourist's deliberately mistranslated phrasebook makes him say that line instead of what he meant. eels tries to be the opposite of that phrasebook.
 
 Live subtitles for Python Pizza Istanbul (14 November 2026): English talks get Turkish subtitles, Turkish talks get English ones. Shown by OBS as a transparent 1920 x 180 web page. Runs offline on one Apple Silicon Mac.
 
@@ -11,13 +15,13 @@ Needs macOS on Apple Silicon, [uv](https://docs.astral.sh/uv/) and `ffmpeg` (`br
 
 ```sh
 uv sync
-uv run live-translate download-models          # ~3 GB; --all adds the benchmark candidates (~19 GB)
+uv run eels download-models   # ~3 GB; --all adds the benchmark candidates (~19 GB)
 ```
 
 ## Run
 
 ```sh
-uv run live-translate                          # --no-autostart to wait for the Start button
+uv run eels                   # --no-autostart to wait for the Start button
 ```
 
 It prints the control panel URL (`http://localhost:8000/control`) and the OBS URL (`http://<mac-ip>:8000/`). On first run, allow microphone access for the terminal and incoming connections for Python. A denied microphone shows as a red message in the control panel.
@@ -44,7 +48,7 @@ Settings persist in `var/settings.json`.
 ## Test with a file
 
 ```sh
-uv run live-translate play talk.mp3 [--speed 2]
+uv run eels play talk.mp3 [--speed 2]
 ```
 
 ## Transcripts and SRT
@@ -52,13 +56,13 @@ uv run live-translate play talk.mp3 [--speed 2]
 Final subtitles go to `var/transcripts/YYYY-MM-DD.jsonl` (Istanbul date), with times, source, translation, models, why the sentence was cut, delay and name corrections.
 
 ```sh
-uv run live-translate export-srt --date 2026-11-14 --from 11:15 --to 11:40 -o keynote1.srt   # --text source|translation|both, --offset S
+uv run eels export-srt --date 2026-11-14 --from 11:15 --to 11:40 -o keynote1.srt   # --text source|translation|both, --offset S
 ```
 
 ## Schedule and vocabulary
 
-- Agenda: `src/live_translate/data/schedule.json`; refresh with `uv run live-translate update-schedule`.
-- Names per talk (libraries, tools): `src/live_translate/data/program_terms.json`. Used as Whisper's hint, protected from translation, and for correcting misheard names.
+- Agenda: `src/eels/data/schedule.json`; refresh with `uv run eels update-schedule`.
+- Names per talk (libraries, tools): `src/eels/data/program_terms.json`. Used as Whisper's hint, protected from translation, and for correcting misheard names.
 
 ## How it works
 
@@ -75,34 +79,34 @@ mic -> 16 kHz -> auto gain -> Silero VAD -> Whisper every ~0.5 s (LocalAgreement
 ## Benchmarks
 
 ```sh
-uv run live-translate fetch-bench-audio                       # public talk excerpts
-uv run live-translate benchmark --quick --asr ... --mt ... --pipeline ASR+MT [--soak 60]
-uv run python -m live_translate.bench.captioned fetch         # talks by Turkish speakers, some with human captions
-uv run python -m live_translate.bench.captioned run --asr ... --mt ...
+uv run eels fetch-bench-audio                 # public talk excerpts
+uv run eels benchmark --quick --asr ... --mt ... --pipeline ASR+MT [--soak 60]
+uv run python -m eels.bench.captioned fetch   # talks by Turkish speakers, some with human captions
+uv run python -m eels.bench.captioned run --asr ... --mt ...
 ```
 
-Reports are copied to `docs/findings/benchmarks/`. Candidate names: `src/live_translate/bench/candidates.py`.
+Reports are copied to `docs/findings/benchmarks/`. Candidate names: `src/eels/bench/candidates.py`.
 
 ## Pre-event checklist
 
 ### On the M4 Pro (pick models by measuring; Air results are only a starting point)
 
 1. `git pull`, `uv sync`, `uv run pytest`.
-2. `uv run live-translate download-models --all`, `uv run live-translate fetch-bench-audio`, `uv run python -m live_translate.bench.captioned fetch`.
+2. `uv run eels download-models --all`, `uv run eels fetch-bench-audio`, `uv run python -m eels.bench.captioned fetch`.
 3. Quality, judged per direction:
    ```sh
-   uv run python -m live_translate.bench.captioned run \
+   uv run python -m eels.bench.captioned run \
      --asr turbo-750 turbo-full large-v3-750 large-v3-full \
      --mt opus-mt opus-mt-gpu opus-mt-beam4 hymt1.8b hymt7b tg12b
    ```
 4. Speed (preview within ~1-2 s, final within ~1-2 s of a sentence end, no skipped audio):
    ```sh
-   uv run live-translate benchmark --quick --asr turbo-750 turbo-full large-v3-750 \
+   uv run eels benchmark --quick --asr turbo-750 turbo-full large-v3-750 \
      --mt opus-mt opus-mt-gpu hymt1.8b hymt7b tg12b \
      --pipeline turbo-750+opus-mt turbo-full+opus-mt turbo-750+hymt7b large-v3-750+opus-mt
    ```
    Also try `asr_step_s: 0.3` and `asr_audio_ctx: "full"` in `var/settings.json`.
-5. Set the choice in the control panel, then a 60-minute soak: `uv run live-translate benchmark --pipeline <asr>+<mt> --soak 60`.
+5. Set the choice in the control panel, then a 60-minute soak: `uv run eels benchmark --pipeline <asr>+<mt> --soak 60`.
 6. Wi-Fi off: the app must start and `play` a file.
 7. Commit `docs/findings/`.
 
@@ -117,6 +121,6 @@ Reports are copied to `docs/findings/benchmarks/`. Candidate names: `src/live_tr
 
 ## Development
 
-`uv run pytest` (no models needed). Code in `src/live_translate/`; agent notes in `CLAUDE.md`.
+`uv run pytest` (no models needed). Code in `src/eels/`; agent notes in `CLAUDE.md`.
 
 Licenses: Open Sans (OFL 1.1), Silero VAD (MIT), Whisper (MIT), Opus-MT (CC-BY 4.0: credit "Translations by Opus-MT, University of Helsinki" when publishing captions), TranslateGemma (Gemma Terms), HY-MT (Tencent HY Community License, excludes EU/UK/South Korea).

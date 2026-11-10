@@ -1,7 +1,7 @@
 """Construct the pipeline without models or audio, to catch wiring mistakes (missing methods etc.)."""
 
-from live_translate.config import SettingsStore
-from live_translate.pipeline import Pipeline
+from eels.config import SettingsStore
+from eels.pipeline import Pipeline
 
 
 def test_pipeline_constructs_and_reports_status(tmp_path):

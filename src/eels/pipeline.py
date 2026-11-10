@@ -180,7 +180,7 @@ class Pipeline:
         self.current_session: sched.Session | None = None
         self.next_session: sched.Session | None = None
 
-        self.asr = WorkerClient("asr", "live_translate.asr:create", self._asr_spec(s))
+        self.asr = WorkerClient("asr", "eels.asr:create", self._asr_spec(s))
         # One translation worker per distinct model; each direction uses mt_for(settings, src, tgt).
         self.mt_pool: dict[str, WorkerClient] = {}
         self.mt_extra: dict = {}  # extra translator options (the benchmark sets beam_size etc.)
@@ -354,7 +354,7 @@ class Pipeline:
         return list(dict.fromkeys(mt_for(s, a, b) for a, b in self.DIRECTIONS))
 
     def _mt_add(self, model: str) -> WorkerClient:
-        w = WorkerClient("mt", "live_translate.translate:create", {**self.mt_extra, "model": model})
+        w = WorkerClient("mt", "eels.translate:create", {**self.mt_extra, "model": model})
         self.mt_pool[model] = w
         return w
 
@@ -421,7 +421,7 @@ class Pipeline:
         self.event("info", f"now using {model} for translation ({self._mt_dirs(model)})")
 
     def _switch_worker(self, kind: str, spec: dict) -> None:
-        factory = "live_translate.asr:create" if kind == "asr" else "live_translate.translate:create"
+        factory = "eels.asr:create" if kind == "asr" else "eels.translate:create"
         new = WorkerClient("asr" if kind == "asr" else "mt", factory, spec)
         try:
             new.start()

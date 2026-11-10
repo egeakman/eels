@@ -1,9 +1,9 @@
 from datetime import date, datetime
 
-from live_translate import schedule as sched
-from live_translate.config import Settings, SettingsStore
-from live_translate.transcript import TranscriptLog, export_srt, parse_clock
-from live_translate.translate import check_translation, clean_output
+from eels import schedule as sched
+from eels.config import Settings, SettingsStore
+from eels.transcript import TranscriptLog, export_srt, parse_clock
+from eels.translate import check_translation, clean_output
 
 AGENDA = """
 <ol id=agenda-list>
@@ -95,7 +95,7 @@ def test_settings_store_roundtrip(tmp_path):
 
 
 def test_term_protection_roundtrip():
-    from live_translate.translate import protect_terms, restore_terms
+    from eels.translate import protect_terms, restore_terms
 
     text, found = protect_terms("We use Docker and parquet files with DuckDB, not docker-compose.")
     assert found == ["Docker", "parquet", "DuckDB"]
@@ -110,7 +110,7 @@ def test_untranslated_code_switching_is_accepted():
 
 
 def test_translation_model_per_direction():
-    from live_translate.config import mt_for
+    from eels.config import mt_for
 
     s = Settings(mt_model="opus-mt")
     assert mt_for(s, "en", "tr") == "opus-mt" and mt_for(s, "tr", "en") == "opus-mt"

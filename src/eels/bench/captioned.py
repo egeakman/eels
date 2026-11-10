@@ -1,7 +1,7 @@
 """Accuracy on real talks by Turkish speakers, scored against human-made captions.
 
-  uv run python -m live_translate.bench.captioned fetch     # audio excerpts + captions (yt-dlp via uvx)
-  uv run python -m live_translate.bench.captioned run       # streaming vs offline WER, translations
+  uv run python -m eels.bench.captioned fetch     # audio excerpts + captions (yt-dlp via uvx)
+  uv run python -m eels.bench.captioned run       # streaming vs offline WER, translations
 
 Unlike the main benchmark (agreement with Whisper large-v3), this measures real accuracy.
 """
@@ -212,7 +212,7 @@ def run(asr_names: list[str] | None = None, mt_names: list[str] | None = None, o
     best_text: dict[str, tuple[float, str]] = {}
     for cand in asr_names:
         spec, _note = candidates.ASR[cand]
-        asr = WorkerClient("asr", "live_translate.asr:create", spec)
+        asr = WorkerClient("asr", "eels.asr:create", spec)
         asr.start()
         if not asr.wait_ready(900):
             print(f"{cand}: failed to load ({list(asr.status.errors)})")
@@ -264,7 +264,7 @@ def run(asr_names: list[str] | None = None, mt_names: list[str] | None = None, o
     corrector = NameCorrector(protect)  # the whole program: stricter than live, where only nearby talks count
     for cand in mt_names:
         spec, _note = candidates.MT[cand]
-        mt = WorkerClient("mt", "live_translate.translate:create", spec)
+        mt = WorkerClient("mt", "eels.translate:create", spec)
         mt.start()
         if not mt.wait_ready(900):
             print(f"{cand}: failed to load ({list(mt.status.errors)})")
