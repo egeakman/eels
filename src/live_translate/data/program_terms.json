@@ -1,0 +1,18 @@
+{
+  "_comment": "Names likely to come up in each talk (libraries, tools, products), keyed by a word from the talk title. Used as a Whisper hint while the talk or the next one is on, and protected from translation everywhere. Proper names only: ordinary technical words (worker, token, cache) are left for the translator.",
+  "always": ["Python", "PyIstanbul", "Python Pizza", "PyCon", "GitHub", "PyPI", "NumPy", "pandas", "Docker", "Jupyter", "VS Code", "Kahoot"],
+  "talks": {
+    "Rust": ["Rust", "PyO3", "maturin", "Cython", "CPython", "cargo", "GIL"],
+    "LazyTown": ["LazyTown", "Sportacus", "Robbie Rotten", "Polars", "LazyFrame", "itertools", "functools"],
+    "regex": ["regex", "re.compile", "findall", "re.sub", "VERBOSE"],
+    "Django": ["Django", "Django REST Framework", "DRF", "QuerySet", "django-filter", "Django Ninja", "Pydantic"],
+    "Task Queues": ["Celery", "RQ", "Redis", "RabbitMQ", "Dramatiq", "Huey", "PostgreSQL", "SKIP LOCKED", "SQLite"],
+    "FastAPI": ["FastAPI", "Pydantic", "Uvicorn", "Starlette", "SQLAlchemy", "PostgreSQL", "Kubernetes", "GitHub Actions"],
+    "Ultralytics": ["Ultralytics", "YOLO", "model.predict", "OpenCV", "ONNX", "TensorRT", "CoreML", "Raspberry Pi", "Jetson", "PyTorch"],
+    "LLM Context": ["LLM", "OpenAI", "Claude", "Anthropic", "Gemini", "tiktoken", "RAG", "LangChain"],
+    "talks like a human": ["LLM", "ChatGPT", "Claude", "Gemini", "Turing", "GPT"],
+    "MicroPython": ["MicroPython", "CircuitPython", "ESP32", "Raspberry Pi Pico", "e-ink", "e-paper", "Thonny"],
+    "DuckDB": ["DuckDB", "Parquet", "GeoParquet", "GeoPandas", "Shapely", "PostGIS", "Apache Arrow", "Spark", "H3"],
+    "PyCon Turkey": ["PyCon Türkiye", "PyCon Turkey", "EuroPython", "Python Software Foundation", "PSF", "Django Girls"]
+  }
+}

@@ -1,0 +1,170 @@
+[
+  {
+    "start": "2026-11-14T10:30:00+03:00",
+    "end": "2026-11-14T11:00:00+03:00",
+    "title": "Registration 🌻",
+    "speaker": null,
+    "lang": null
+  },
+  {
+    "start": "2026-11-14T11:00:00+03:00",
+    "end": "2026-11-14T11:15:00+03:00",
+    "title": "Opening 👋",
+    "speaker": null,
+    "lang": null
+  },
+  {
+    "start": "2026-11-14T11:15:00+03:00",
+    "end": "2026-11-14T11:40:00+03:00",
+    "title": "Keynote - TBA",
+    "speaker": "Lysandros Nikolaou",
+    "lang": "en"
+  },
+  {
+    "start": "2026-11-14T11:45:00+03:00",
+    "end": "2026-11-14T11:55:00+03:00",
+    "title": "Turning a Python Bottleneck into a Rust Module",
+    "speaker": "Dmitry Orlyakov",
+    "lang": "en"
+  },
+  {
+    "start": "2026-11-14T11:57:00+03:00",
+    "end": "2026-11-14T12:07:00+03:00",
+    "title": "LazyTown: Sportacus Kadar Hızlı, Robbie Rotten Kadar Tembel",
+    "speaker": "Oğulcan Doğan",
+    "lang": "tr"
+  },
+  {
+    "start": "2026-11-14T12:10:00+03:00",
+    "end": "2026-11-14T12:30:00+03:00",
+    "title": "Coffee Break #1 ☕️",
+    "speaker": null,
+    "lang": null
+  },
+  {
+    "start": "2026-11-14T12:30:00+03:00",
+    "end": "2026-11-14T12:40:00+03:00",
+    "title": "regex in 10 Minutes: From Cryptic Strings to Daily Superpowers",
+    "speaker": "Agata Skamruk",
+    "lang": "en"
+  },
+  {
+    "start": "2026-11-14T12:42:00+03:00",
+    "end": "2026-11-14T12:52:00+03:00",
+    "title": "RESTful query parameters with Django",
+    "speaker": "Şuayip Üzülmez",
+    "lang": "en"
+  },
+  {
+    "start": "2026-11-14T12:54:00+03:00",
+    "end": "2026-11-14T13:04:00+03:00",
+    "title": "Python Task Queues Without the Broker",
+    "speaker": "Ahmet Burak Özyurt",
+    "lang": "en"
+  },
+  {
+    "start": "2026-11-14T13:06:00+03:00",
+    "end": "2026-11-14T13:16:00+03:00",
+    "title": "From Zero to Production with FastAPI",
+    "speaker": "Erhan Büte",
+    "lang": "tr"
+  },
+  {
+    "start": "2026-11-14T13:17:00+03:00",
+    "end": "2026-11-14T14:17:00+03:00",
+    "title": "Pizza time! 🍕",
+    "speaker": null,
+    "lang": null
+  },
+  {
+    "start": "2026-11-14T14:17:00+03:00",
+    "end": "2026-11-14T14:42:00+03:00",
+    "title": "Keynote - TBA",
+    "speaker": "Ayşe Bilge İnce",
+    "lang": "en"
+  },
+  {
+    "start": "2026-11-14T14:47:00+03:00",
+    "end": "2026-11-14T14:57:00+03:00",
+    "title": "model.predict(): Real-Time Edge Vision with Ultralytics",
+    "speaker": "Onuralp Sezer",
+    "lang": "en"
+  },
+  {
+    "start": "2026-11-14T14:59:00+03:00",
+    "end": "2026-11-14T15:09:00+03:00",
+    "title": "LLM Context Profiling: what is eating up your tokens?",
+    "speaker": "Rimantas Zukaitis",
+    "lang": "en"
+  },
+  {
+    "start": "2026-11-14T15:11:00+03:00",
+    "end": "2026-11-14T15:21:00+03:00",
+    "title": "It talks like a human, responds like a human, but it is not a human",
+    "speaker": "Cheuk Ting Ho",
+    "lang": "en"
+  },
+  {
+    "start": "2026-11-14T15:22:00+03:00",
+    "end": "2026-11-14T15:42:00+03:00",
+    "title": "Coffee Break #2 ☕️",
+    "speaker": null,
+    "lang": null
+  },
+  {
+    "start": "2026-11-14T15:42:00+03:00",
+    "end": "2026-11-14T15:52:00+03:00",
+    "title": "MicroPython with hardware and e-ink",
+    "speaker": "Duhan Günsel",
+    "lang": "tr"
+  },
+  {
+    "start": "2026-11-14T15:54:00+03:00",
+    "end": "2026-11-14T16:04:00+03:00",
+    "title": "Do You Still Need a Cluster? Rebuilding a Geospatial Stack on DuckDB",
+    "speaker": "Aleksandar Milosevic",
+    "lang": "en"
+  },
+  {
+    "start": "2026-11-14T16:06:00+03:00",
+    "end": "2026-11-14T16:20:00+03:00",
+    "title": "The Story of PyCon Turkey",
+    "speaker": "Yiğit Güler",
+    "lang": "tr"
+  },
+  {
+    "start": "2026-11-14T16:20:00+03:00",
+    "end": "2026-11-14T16:40:00+03:00",
+    "title": "Coffee Break #3 ☕️",
+    "speaker": null,
+    "lang": null
+  },
+  {
+    "start": "2026-11-14T16:40:00+03:00",
+    "end": "2026-11-14T17:00:00+03:00",
+    "title": "Lightning Talks ⚡️",
+    "speaker": "Talks submitted and picked on the day of the event! Got a project, an idea or a fun Python trick to share with the community? Bring it to the stage, 5 minutes max.",
+    "lang": null
+  },
+  {
+    "start": "2026-11-14T17:00:00+03:00",
+    "end": "2026-11-14T17:15:00+03:00",
+    "title": "Python Quiz with Surprise Prizes 🎁",
+    "speaker": null,
+    "lang": null
+  },
+  {
+    "start": "2026-11-14T17:15:00+03:00",
+    "end": "2026-11-14T17:30:00+03:00",
+    "title": "Closing 🎤",
+    "speaker": null,
+    "lang": null
+  },
+  {
+    "start": "2026-11-14T17:30:00+03:00",
+    "end": "2026-11-14T18:00:00+03:00",
+    "title": "Last chats & dinner plans 🍻",
+    "speaker": null,
+    "lang": null
+  }
+]
