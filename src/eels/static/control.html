@@ -481,7 +481,7 @@
     $("gemini-info").textContent = !gem ? "Whisper and the translation models run on this Mac."
       : !engine.gemini_key ? "No Gemini key yet: Setup, Gemini."
       : !run.running ? "Gemini connects when you press Start."
-      : onGemini ? `Gemini is on screen. About $${g.cost_usd.toFixed(2)} so far.`
+      : onGemini ? `Gemini is on screen. About $${g.cost_usd.toFixed(2)} since eels started.`
       : "Gemini is not responding; the local models are on screen.";
     // Gemini mode: the local models are its backup. Changeable while loaded; locked while unloaded.
     const unloaded = gem && !settings.gemini_standby;
@@ -510,7 +510,7 @@
     $("h-conf").textContent = fmtPair(delays.final_p50, delays.final_p95);
     if (onGemini && g) {
       $("h-third").textContent = `$${g.cost_usd.toFixed(2)}`; $("h-third").className = "v num";
-      $("h-third-k").textContent = "Gemini cost so far";
+      $("h-third-k").textContent = "Gemini cost since eels started";
     } else {
       $("h-third").textContent = fmtS(local.backlog_s) + (local.skips ? `, ${local.skips} skips` : "");
       $("h-third").className = "v num " + (local.backlog_s > 2 ? "bad" : "");

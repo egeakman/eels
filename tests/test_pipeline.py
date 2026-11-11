@@ -67,8 +67,12 @@ def test_gemini_engine_shows_sentences_and_falls_back(tmp_path, monkeypatch):
         assert full.endswith("Additional instructions from the organisers: Do not translate the word sprint.")
         assert p.cloud.instruction == full and p.cloud.sessions["en"] is not before  # reconnected
         assert store.value.gemini_extra_instruction == "Do not translate the word sprint."
+        p.cloud.closed_cost_usd = 0.5  # spent before an engine switch
         p.apply_settings({"engine": "local"})
         assert p.cloud is None
+        p.apply_settings({"engine": "gemini"})
+        assert p._gemini_status().cost_usd == 0.5  # kept across the new Gemini client
+        p.apply_settings({"engine": "local"})
     finally:
         p.capture.close()
 

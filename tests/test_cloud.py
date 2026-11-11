@@ -202,3 +202,18 @@ def test_vertex_model_gets_its_full_address():
     assert model_path(m, "vertex", "123", "global") == f"projects/123/locations/global/publishers/google/models/{m}"
     assert model_path(m, "ai_studio", "123") == m  # AI Studio takes the plain name
     assert model_path(m, "vertex", "") == m  # no project known: leave it to the SDK
+
+
+def test_cost_survives_stop_and_start():
+    server = FakeServer([])
+    g = GeminiLive(lambda *a: None, lambda *a: None, lambda *a: None, key="test", connect=server.connect)
+    try:
+        g.set_targets(["tr"])
+        g.sessions["tr"].audio_in_s = g.sessions["tr"].audio_out_s = 600  # 10 minutes each way
+        spent = g.cost_usd
+        assert spent > 0.3
+        g.stop()  # Stop in the control panel
+        g.set_targets(["tr"])  # Start again: a new session
+        assert abs(g.cost_usd - spent) < 1e-9 and g.status().cost_usd == round(spent, 2)
+    finally:
+        g.shutdown()

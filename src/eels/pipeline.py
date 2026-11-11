@@ -253,6 +253,9 @@ class Pipeline:
         self.cloud_speech_s = 0.0  # seconds of speech since Gemini last produced text
         self.ring: deque[tuple[np.ndarray, float]] = deque()  # recent audio, replayed into the local engine on failover
         self.cloud_seq = 1_000_000  # subtitle ids, apart from the local engine's clause numbers
+        self.gemini_cost_before = (
+            0.0  # spent by earlier Gemini clients since eels started (engine, key, account changes)
+        )
 
         self.m_asr_ms = Rolling()
         self.m_mt_ms = Rolling()
@@ -882,6 +885,7 @@ class Pipeline:
         with self._engine_lock:
             cloud, self.cloud = self.cloud, None
         cloud.shutdown()
+        self.gemini_cost_before += cloud.cost_usd
         self.display.drop_interim()
         self.event("info", "engine: local models")
 
@@ -1168,12 +1172,20 @@ class Pipeline:
             ),
             models=[self._model_status(self.asr)] + [self._model_status(w) for w in list(self.mt_pool.values())],
             switching=dict(self.switching),
-            gemini=self.cloud.status() if self.cloud else None,
+            gemini=self._gemini_status(),
             talk_now=self._talk(self.current_session),
             talk_next=self._talk(self.next_session),
             events=list(self.events)[-12:],
             settings=s.model_dump(),
         )
+
+    def _gemini_status(self) -> st.GeminiStatus | None:
+        """Gemini's connection, with the spend since eels started (it survives Stop and reconnects)."""
+        if self.cloud is None:
+            return None
+        g = self.cloud.status()
+        g.cost_usd = round(self.gemini_cost_before + self.cloud.cost_usd, 2)
+        return g
 
     def _model_status(self, w: WorkerClient) -> st.ModelStatus:
         """One local model for the panel: which model, what it is doing, measured memory."""

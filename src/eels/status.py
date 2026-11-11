@@ -123,7 +123,7 @@ class GeminiStatus:
     model: str
     connected: bool
     sessions: list[GeminiSession]
-    cost_usd: float
+    cost_usd: float  # estimated spend since eels started
 
 
 @dataclass

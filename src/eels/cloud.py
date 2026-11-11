@@ -276,6 +276,10 @@ class SessionStatus:
     audio_in_s: float = 0.0
     audio_out_s: float = 0.0
 
+    @property
+    def cost_usd(self) -> float:
+        return self.audio_in_s / 60 * PRICE_IN_PER_MIN + self.audio_out_s / 60 * PRICE_OUT_PER_MIN
+
     def public(self) -> GeminiSession:
         return GeminiSession(
             target=self.target,
@@ -343,6 +347,7 @@ class GeminiLive:
         # Resumption and compression keep a session going past the 10-minute connection and
         # 15-minute session limits. If this model rejects them, run without (reconnect fresh).
         self.extended = True
+        self.closed_cost_usd = 0.0  # sessions already closed (Stop, retarget, restart)
         self.echo = False  # echo_target_language for all sessions
         self._loop = asyncio.new_event_loop()
         self._thread = threading.Thread(target=self._loop.run_forever, name="gemini", daemon=True)
@@ -385,10 +390,14 @@ class GeminiLive:
         times = [s.last_output_mono for s in self.sessions.values() if s.last_output_mono]
         return max(times) if times else None
 
+    @property
+    def cost_usd(self) -> float:
+        """Estimated spend of this client: closed sessions plus the open ones."""
+        return self.closed_cost_usd + sum(s.cost_usd for s in list(self.sessions.values()))
+
     def status(self) -> GeminiStatus:
         sess = list(self.sessions.values())
-        cost = sum(s.audio_in_s / 60 * PRICE_IN_PER_MIN + s.audio_out_s / 60 * PRICE_OUT_PER_MIN for s in sess)
-        return GeminiStatus(self.model, self.connected, [s.public() for s in sess], round(cost, 2))
+        return GeminiStatus(self.model, self.connected, [s.public() for s in sess], round(self.cost_usd, 2))
 
     # Event loop side ----------------------------------------------------------------------
     def _put(self, frame: bytes) -> None:
@@ -409,6 +418,7 @@ class GeminiLive:
             st = self.sessions.pop(t, None)
             if st:
                 st.state = "stopped"
+                self.closed_cost_usd += st.cost_usd
         for t in targets:
             if t not in self._tasks:
                 self._queues[t] = asyncio.Queue()
