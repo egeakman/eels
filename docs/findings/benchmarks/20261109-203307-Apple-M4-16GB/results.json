@@ -56,7 +56,7 @@
     "hymt1.8b": {
       "note": "Tencent HY-MT1.5 1.8B, MLX 8-bit",
       "spec": {
-        "model": "/Users/egeakman/.cache/live-translate/HY-MT1.5-1.8B-mlx-8bit"
+        "model": "~/.cache/live-translate/HY-MT1.5-1.8B-mlx-8bit"
       },
       "directions": {
         "en->tr": {
