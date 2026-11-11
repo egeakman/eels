@@ -181,6 +181,9 @@ def test_gemini_instruction_carries_the_program():
     text = gemini_instruction(sched.load())
     assert "Lysandros Nikolaou" in text and "PyIstanbul" in text
     assert "eee" in text  # no filler sounds
+    assert "The event's sponsors: EuroPython Society, StartGate" in text and "fal (the company fal.ai)" in text
+    assert "The venue is StartGate." in text
+    assert "The organizers: Özge Çinko, Kader Miyanyedi, Cemrehan Çavdar, Ege Akman." in text
     assert "call for proposals = konuşma başvuruları" in text and "sprint = sprint" in text and "_comment" not in text
 
 
@@ -192,3 +195,22 @@ def test_panel_catalog_lists_models_without_network(monkeypatch):
     assert next(o["key"] for o in c["speech"]) == models.DEFAULT_SPEECH
     assert all(isinstance(o["available"], bool) and o["title"] for o in c["speech"] + c["translation"])
     assert "opus-mt-beam4" not in [o["key"] for o in c["translation"]]  # benchmark-only
+
+
+def test_sponsors_are_protected_names_but_turkish_fal_is_not():
+    from eels.hints import protected_names
+    from eels.translate import protect_terms
+
+    names = protected_names(sched.load())
+    assert {"StartGate", "Domino's Pizza", "fal.ai", "Bilus Teknoloji"} <= set(names)
+    _, found = protect_terms("Kahve falı ve fal bakmak, StartGate'te.", names)
+    assert found == ["StartGate"]  # the Turkish word fal is translated as usual
+
+
+def test_organizer_first_names_stay_ordinary_words():
+    from eels.hints import protected_names
+    from eels.translate import protect_terms
+
+    names = protected_names(sched.load())
+    _, found = protect_terms("Kader böyleymiş; Ege Akman ve Kader Miyanyedi Ege'de.", names)
+    assert found == ["Ege Akman", "Kader Miyanyedi"]

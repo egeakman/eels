@@ -11,6 +11,15 @@
     "code of conduct": "davranış kuralları",
     "booth": "stant"
   },
+  "organizers": {
+    "_comment": "From istanbul.python.pizza (2026-11-11). Full names only: first names such as Kader or Ege are also Turkish words.",
+    "names": ["Özge Çinko", "Kader Miyanyedi", "Cemrehan Çavdar", "Ege Akman"]
+  },
+  "sponsors": {
+    "_comment": "From istanbul.python.pizza (2026-11-11). Names used as written; fal is listed as fal.ai because 'fal' alone is a common Turkish word.",
+    "names": ["EuroPython Society", "StartGate", "Domino's Pizza", "fal.ai", "Bilus Teknoloji", "Brik"],
+    "venue": "StartGate"
+  },
   "always": ["Python", "PyIstanbul", "Python Pizza", "PyCon", "GitHub", "PyPI", "NumPy", "pandas", "Docker", "Jupyter", "VS Code", "Kahoot"],
   "talks": {
     "Rust": ["Rust", "PyO3", "maturin", "Cython", "CPython", "cargo", "GIL"],

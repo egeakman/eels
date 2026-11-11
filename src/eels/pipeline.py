@@ -387,7 +387,7 @@ class Pipeline:
 
     def _refresh_names(self, cur=None, nxt=None) -> None:
         """Dictionary for name correction: speakers, all-day names, the current and next talks' terms."""
-        names = hints.speakers(self.sessions) + hints.always_names()
+        names = hints.speakers(self.sessions) + hints.always_names() + hints.organizers()
         for sess in (cur, nxt):
             if sess:
                 names += hints.talk_terms(sess.title)

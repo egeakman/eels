@@ -28,8 +28,17 @@ def talk_terms(title: str | None) -> list[str]:
     return list(dict.fromkeys(out))
 
 
+def organizers() -> list[str]:
+    return list(_terms().get("organizers", {}).get("names", []))
+
+
+def sponsors() -> list[str]:
+    return list(_terms().get("sponsors", {}).get("names", []))
+
+
 def always_names() -> list[str]:
-    return list(_terms()["always"])
+    """Names that can come up in any talk: tools, the community, the sponsors."""
+    return list(dict.fromkeys(_terms()["always"] + sponsors()))
 
 
 def speakers(sessions) -> list[str]:
@@ -38,7 +47,7 @@ def speakers(sessions) -> list[str]:
 
 def protected_names(sessions) -> list[str]:
     """Every name in the program: never translated ("Celery" is not "kereviz", "Flask" not "şişe")."""
-    names = list(_terms()["always"])
+    names = always_names() + organizers()
     for terms in _terms()["talks"].values():
         names += terms
     return list(dict.fromkeys(names + speakers(sessions)))
@@ -54,6 +63,13 @@ def gemini_instruction(sessions, extra: str = "") -> str:
     names right ("PyCon" instead of "Pycon" or "Pi günümüzü"). Real Turkish terms in a glossary are
     followed ("call for proposals" -> "konuşma başvuruları"); a made-up word was not."""
     glossary = ", ".join(f"{en} = {tr}" for en, tr in glossary_tr().items())
+    info = _terms().get("sponsors", {})
+    names = [("fal (the company fal.ai)" if n == "fal.ai" else n) for n in info.get("names", [])]
+    sponsor_line = f"The event's sponsors: {', '.join(names)}. " if names else ""
+    if organizers():
+        sponsor_line += f"The organizers: {', '.join(organizers())}. "
+    if info.get("venue"):
+        sponsor_line += f"The venue is {info['venue']}. "
     talks = [
         f"{s.title} ({s.speaker})" if s.speaker and len(s.speaker) < 60 else s.title
         for s in sessions
@@ -64,6 +80,7 @@ def gemini_instruction(sessions, extra: str = "") -> str:
         "audience in the room and on the live stream. "
         f"Keep these names exactly as written and never translate them: {', '.join(protected_names(sessions))}. "
         f"Today's talks: {'; '.join(talks)}. "
+        f"{sponsor_line}"
         "Leave out filler sounds such as eee, ııı, uh and um. "
         "When the Turkish does not say whether a person is a man or a woman, use they in English. "
         f"Conference terms in Turkish subtitles: {glossary}."
@@ -119,7 +136,7 @@ def _asr_hint(lang: str, sessions, current=None, nxt=None) -> str:
                 else f"{sess.title}."
             )
             terms += talk_terms(sess.title)
-    terms = list(dict.fromkeys(terms + _terms()["always"]))
+    terms = list(dict.fromkeys(terms + always_names()))
     parts.append(("Terimler: " if tr else "Terms: ") + ", ".join(terms) + ".")
     names = speakers(sessions)
     if names:
