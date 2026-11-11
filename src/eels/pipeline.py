@@ -4,7 +4,9 @@ Threads:
   audio consumer (audio.py)  -> self._audio_q
   asr-loop                   VAD, gate, LocalAgreement, clause segmentation, ASR worker calls
   mt-loop                    translation worker calls (confirmed clauses first, then latest interim)
-  housekeeping               clear-after-silence, schedule auto-switch, status publishing
+  housekeeping               clear-after-silence, schedule auto-switch, status publishing, failover
+  gemini (cloud.py)          with engine "gemini": streams audio to Gemini Live Translate and shows its
+                             text; the local pipeline takes over while Gemini is down (cloud.Failover)
 """
 
 from __future__ import annotations
@@ -16,25 +18,38 @@ import threading
 import time
 from collections import deque
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from typing import ClassVar
 
 import numpy as np
 
-from . import hints
+from . import hints, models
 from . import schedule as sched
+from . import status as st
 from .audio import AudioCapture, DeviceWatcher, FilePlayer, list_input_devices, load_audio_file, mic_permission
-from .config import Settings, SettingsStore, mt_for
+from .cloud import Failover, GeminiLive, Sentence, Sentencer, api_key, echo_for, key_source, store_key, targets_for
+from .config import Settings, SettingsStore, translation_model_for
 from .engine import Interim, StreamEngine, other
 from .gender import neutralize
 from .names import NameCorrector
+from .status import Event
 from .streaming import SAMPLE_RATE, Clause
-from .transcript import TranscriptLog
+from .transcript import TranscriptLog, TranscriptRecord
 from .translate import check_translation
+from .vad import AutoGain, SileroVAD, SpeechGate
 from .workers import WorkerClient, WorkerError
 
 log = logging.getLogger(__name__)
+
+LANG_NAMES = {"en": "English", "tr": "Turkish"}
+
+
+def _dirs_text(dirs, before: str = "", after: str = "") -> str:
+    """("en", "tr") pairs as "English to Turkish and Turkish to English"."""
+    text = " and ".join(f"{LANG_NAMES[a]} to {LANG_NAMES[b]}" for a, b in dirs)
+    return f"{before}{text}{after}" if text else ""
+
 
 Publish = Callable[[str, dict], None]  # (channel, message), channel in {"overlay", "control"}
 
@@ -74,7 +89,7 @@ class MTJob:
     created: float = field(default_factory=time.monotonic)
     session: str | None = None
     reason: str = ""  # why the sentence was cut: sentence, gap, max_words, max_time, language, end
-    model: str = ""  # translation model that produced the text
+    model: str = ""  # catalog key of the translation model that produced the text
     corrections: list = field(default_factory=list)  # (heard, corrected) name fixes
 
 
@@ -84,8 +99,8 @@ class Display:
     def __init__(self, publish: Publish, settings: Callable[[], Settings]):
         self.publish = publish
         self.settings = settings
-        self.segments: deque[dict] = deque(maxlen=8)
-        self.interim: dict | None = None
+        self.segments: deque[st.Segment] = deque(maxlen=8)
+        self.interim: st.Pending | None = None
         self.last_change = time.monotonic()
         self.hold_until = 0.0  # test text stays up until this time
         self._lock = threading.Lock()
@@ -95,8 +110,8 @@ class Display:
         return {
             "type": "state",
             "visible": s.visible,
-            "segments": list(self.segments),
-            "interim": self.interim["text"] if self.interim else "",
+            "segments": [asdict(x) for x in self.segments],
+            "interim": self.interim.text if self.interim else "",
             "style": {
                 "font_size": s.font_size,
                 "lines": s.lines,
@@ -115,10 +130,10 @@ class Display:
 
     def add_confirmed(self, seq: int, text: str, lang: str) -> None:
         with self._lock:
-            if self.segments and self.segments[-1]["lang"] != lang:
+            if self.segments and self.segments[-1].lang != lang:
                 self.segments.clear()  # direction changed: start fresh
-            self.segments.append({"id": seq, "text": text, "lang": lang})
-            if self.interim and self.interim["base"] <= seq:
+            self.segments.append(st.Segment(seq, text, lang))
+            if self.interim and self.interim.base <= seq:
                 self.interim = None
             self.last_change = time.monotonic()
         self.push()
@@ -129,14 +144,14 @@ class Display:
                 return False  # a clause was cut since this was requested; it would duplicate text
             now = time.monotonic()
             old = self.interim
-            if old and old["base"] == base:
-                a, b = old["text"].split(), text.split()
+            if old and old.base == base:
+                a, b = old.text.split(), text.split()
                 only_last_word = len(a) == len(b) and a[:-1] == b[:-1]
-                if text == old["text"] or (only_last_word and now - old["t"] < 0.5):
+                if text == old.text or (only_last_word and now - old.t < 0.5):
                     return False
-            if self.segments and self.segments[-1]["lang"] != lang:
+            if self.segments and self.segments[-1].lang != lang:
                 self.segments.clear()
-            self.interim = {"base": base, "text": text, "t": now, "lang": lang}
+            self.interim = st.Pending(base, text, lang, now)
             self.last_change = now
         self.push()
         return True
@@ -159,8 +174,8 @@ class Display:
     def show_test(self, hold_s: float = 20.0) -> None:
         with self._lock:
             self.segments.clear()
-            self.segments.append({"id": -2, "text": TEST_LINES["en"], "lang": "en"})
-            self.segments.append({"id": -1, "text": TEST_LINES["tr"], "lang": "tr"})
+            self.segments.append(st.Segment(-2, TEST_LINES["en"], "en"))
+            self.segments.append(st.Segment(-1, TEST_LINES["tr"], "tr"))
             self.interim = None
             self.last_change = time.monotonic()
             self.hold_until = self.last_change + hold_s
@@ -180,10 +195,9 @@ class Pipeline:
         self.current_session: sched.Session | None = None
         self.next_session: sched.Session | None = None
 
-        self.asr = WorkerClient("asr", "eels.asr:create", self._asr_spec(s))
-        # One translation worker per distinct model; each direction uses mt_for(settings, src, tgt).
+        self.asr = self._new_worker(s.speech_model)
+        # One translation worker per distinct model key; each direction uses translation_model_for().
         self.mt_pool: dict[str, WorkerClient] = {}
-        self.mt_extra: dict = {}  # extra translator options (the benchmark sets beam_size etc.)
 
         self.engine = StreamEngine(
             lambda: self.store.value,
@@ -213,16 +227,28 @@ class Pipeline:
         self._mt_interim: MTJob | None = None
         self._reload: set[str] = set()  # workers to restart with the same model (memory watchdog)
         self._mt_client_lock = threading.Lock()  # held while the MT loop uses self.mt
-        self.switching: dict[str, str] = {}  # kind -> model being loaded for a hot swap
+        self.switching: dict[str, str] = {}  # kind -> model key being loaded for a hot swap
         self._engine_lock = threading.RLock()
         self._shutdown = threading.Event()
+
+        # Gemini engine (cloud.py). The local pipeline stays loaded as the fallback.
+        self.cloud: GeminiLive | None = None
+        self.failover = Failover()
+        self.sentencers: dict[str, Sentencer] = {}
+        self.cloud_agc = AutoGain()
+        self.cloud_vad = SileroVAD()
+        self.cloud_gate = SpeechGate()
+        self.cloud_last_speech = 0.0  # capture time of the last speech frame (clear-after-silence)
+        self.cloud_speech_s = 0.0  # seconds of speech since Gemini last produced text
+        self.ring: deque[tuple[np.ndarray, float]] = deque()  # recent audio, replayed into the local engine on failover
+        self.cloud_seq = 1_000_000  # subtitle ids, apart from the local engine's clause numbers
 
         self.m_asr_ms = Rolling()
         self.m_mt_ms = Rolling()
         self.m_delay_interim = Rolling()
         self.m_delay_confirmed = Rolling()
         self.started_at = time.monotonic()
-        self.events: deque[dict] = deque(maxlen=30)
+        self.events: deque[Event] = deque(maxlen=30)
 
         self._threads = [
             threading.Thread(target=self._asr_loop, name="asr-loop", daemon=True),
@@ -233,16 +259,26 @@ class Pipeline:
     # Lifecycle ------------------------------------------------------------------
     def boot(self) -> None:
         """Start workers (model loading) and background threads. Audio starts with start()."""
-        self.asr.start()
+        s = self.store.value
         for model in self._mt_models_in_use():
-            self._mt_add(model).start()
+            self._mt_add(model)
+        if s.engine == "gemini" and not s.gemini_standby and api_key():
+            for w in self._local_workers():  # not needed until Gemini fails
+                w.parked, w.status.state = True, "unloaded"
+        else:
+            for w in self._local_workers():
+                w.start()
         self.watcher.start()
+        if s.engine == "gemini":
+            self._cloud_enable()
         for t in self._threads:
             t.start()
 
     def shutdown(self) -> None:
         self._shutdown.set()  # threads exit and must not respawn workers afterwards
         self.stop()
+        if self.cloud:
+            self.cloud.shutdown()
         self.capture.close()
         self.watcher.stop()
         self.asr.stop()
@@ -253,6 +289,7 @@ class Pipeline:
         if self.source == "live":
             self.capture.start()
         self.running = True
+        self._cloud_open()
         self.event("info", "started")
 
     def stop(self) -> None:
@@ -262,6 +299,11 @@ class Pipeline:
             self.player.stop()
             self.player = None
         self._engine_call(lambda: self.engine.end_utterance(flush=True))
+        if self.cloud:
+            self.cloud.stop()
+            for target, sn in list(self.sentencers.items()):
+                for sent in sn.tick(float("inf")):  # show what was still pending
+                    self._cloud_show(target, sent)
         self.event("info", "stopped")
 
     def play_file(self, path: str, speed: float = 1.0) -> None:
@@ -275,6 +317,7 @@ class Pipeline:
             audio, self._on_audio, speed=speed, on_done=lambda: self.event("info", f"file finished: {path}")
         )
         self.running = True
+        self._cloud_open()
         self.player.start()
         self.event("info", f"playing {path} ({len(audio) / SAMPLE_RATE:.0f} s, speed {speed}x)")
 
@@ -288,34 +331,43 @@ class Pipeline:
             self.capture.start()
 
     def event(self, level: str, msg: str) -> None:
-        self.events.append({"t": time.strftime("%H:%M:%S"), "level": level, "msg": msg})
+        self.events.append(Event(level, msg))
         getattr(log, "warning" if level == "warn" else level if level in ("info", "error") else "info")(msg)
 
     # Settings -------------------------------------------------------------------
     @staticmethod
-    def _asr_spec(s: Settings) -> dict:
-        return {"model": s.asr_model, "audio_ctx": s.asr_audio_ctx}
+    def _new_worker(key: str) -> WorkerClient:
+        """A worker for a catalog model (not started)."""
+        m = models.get(key)
+        if m.job == "speech":
+            w = WorkerClient("asr", "eels.asr:create", dict(m.spec))
+        else:
+            w = WorkerClient("mt", "eels.translate:create", dict(m.spec))
+        w.model_key = key
+        return w
 
     def apply_settings(self, changes: dict) -> Settings:
         changes = dict(changes)
-        asr_change = {k: changes.pop(k) for k in ("asr_model", "asr_audio_ctx") if k in changes}
-        mt_changes = {k: changes.pop(k) for k in ("mt_model", "mt_model_en_tr", "mt_model_tr_en") if k in changes}
-        if asr_change:
-            cur = self.store.value
-            self.switch_model(
-                "asr", asr_change.get("asr_model", cur.asr_model), asr_change.get("asr_audio_ctx", cur.asr_audio_ctx)
-            )
-        for key, model in mt_changes.items():
-            if model:
-                self.switch_model(
-                    {"mt_model": "mt", "mt_model_en_tr": "mt_en_tr", "mt_model_tr_en": "mt_tr_en"}[key], model
-                )
+        # Model changes load the new model first (switch_model); the setting follows when it is ready.
+        for kind, field_name in self.MODEL_FIELDS.items():
+            key = changes.pop(field_name, None)
+            if key:
+                self.switch_model(kind, key)
         old = self.store.value
         s = self.store.update(**changes)
         if "device_name" in changes or "channel" in changes:
             self.capture.configure(s.device_name, s.channel)
         if s.spoken_language != old.spoken_language:
             self.engine.language_changed(s.spoken_language)
+        if (s.engine, s.gemini_model) != (old.engine, old.gemini_model):
+            self._cloud_disable()
+            if s.engine == "gemini":
+                self._cloud_enable()
+            self._apply_standby()
+        elif s.gemini_standby != old.gemini_standby:
+            self._apply_standby()
+        elif s.spoken_language != old.spoken_language:
+            self._cloud_open()
         if not s.interim and old.interim:
             self.display.drop_interim()
         self.engine.sync_settings()
@@ -351,11 +403,11 @@ class Pipeline:
 
     def _mt_models_in_use(self, s: Settings | None = None) -> list[str]:
         s = s or self.store.value
-        return list(dict.fromkeys(mt_for(s, a, b) for a, b in self.DIRECTIONS))
+        return list(dict.fromkeys(translation_model_for(s, a, b) for a, b in self.DIRECTIONS))
 
-    def _mt_add(self, model: str) -> WorkerClient:
-        w = WorkerClient("mt", "eels.translate:create", {**self.mt_extra, "model": model})
-        self.mt_pool[model] = w
+    def _mt_add(self, key: str) -> WorkerClient:
+        w = self._new_worker(key)
+        self.mt_pool[key] = w
         return w
 
     def _mt_prune(self) -> None:
@@ -368,85 +420,98 @@ class Pipeline:
     def mt_ready(self) -> bool:
         return bool(self.mt_pool) and all(w.ready for w in self.mt_pool.values())
 
-    def _mt_dirs(self, model: str) -> str:
+    def _mt_dirs(self, key: str) -> list[tuple[str, str]]:
+        """The directions a translation model serves."""
         s = self.store.value
-        return ", ".join(f"{a.upper()}→{b.upper()}" for a, b in self.DIRECTIONS if mt_for(s, a, b) == model)
+        return [(a, b) for a, b in self.DIRECTIONS if translation_model_for(s, a, b) == key]
 
     # Hot swap -----------------------------------------------------------------------
+    # kind -> the setting it changes, and the translation directions it covers
+    MODEL_FIELDS: ClassVar[dict[str, str]] = {
+        "speech": "speech_model",
+        "translation": "translation_model",
+        "translation_en_tr": "translation_model_en_tr",
+        "translation_tr_en": "translation_model_tr_en",
+    }
     MT_KINDS: ClassVar[dict[str, tuple[tuple[str, str], ...]]] = {
-        "mt": DIRECTIONS,
-        "mt_en_tr": (("en", "tr"),),
-        "mt_tr_en": (("tr", "en"),),
+        "translation": DIRECTIONS,
+        "translation_en_tr": (("en", "tr"),),
+        "translation_tr_en": (("tr", "en"),),
     }
 
-    def switch_model(self, kind: str, model: str, audio_ctx: str | None = None) -> None:
+    def switch_model(self, kind: str, key: str) -> None:
         """Load a new model in a fresh worker while the current one keeps working, then swap.
 
-        kind: "asr", "mt" (both translation directions), "mt_en_tr" or "mt_tr_en".
-        Subtitles do not pause. If the new model fails to load, the current one stays.
-        The setting is saved only after the swap succeeded.
+        kind: "speech", "translation" (both directions), "translation_en_tr" or "translation_tr_en";
+        key: a model from the catalog. Subtitles do not pause. If the new model fails to load,
+        the current one stays. The setting is saved only after the swap succeeded.
         """
+        m = models.get(key)
+        if m.job != ("speech" if kind == "speech" else "translation"):
+            raise ValueError(f"{m.title} is not a {kind} model")
         if kind in self.switching:
             self.event("warn", f"already switching the {kind} model; wait for it to finish")
             return
-        if kind == "asr":
-            spec = {"model": model, "audio_ctx": audio_ctx or "750"}
-            if self.asr.spec == spec:
+        if self.local_parked:
+            self.event(
+                "warn",
+                "the local models are unloaded while Gemini runs; turn on Keep local models loaded (Engine) to change them",
+            )
+            return
+        if kind == "speech":
+            if self.asr.model_key == key:
                 return
         else:
             s = self.store.value
-            if all(mt_for(s, a, b) == model for a, b in self.MT_KINDS[kind]):
+            if all(translation_model_for(s, a, b) == key for a, b in self.MT_KINDS[kind]):
                 return
-            spec = {**self.mt_extra, "model": model}
-            if model in self.mt_pool and self.mt_pool[model].ready:
-                self._mt_assign(kind, model)  # already loaded for the other direction
+            if key in self.mt_pool and self.mt_pool[key].ready:
+                self._mt_assign(kind, key)  # already loaded for the other direction
                 return
-        self.switching[kind] = model
-        what = (
-            "speech recognition"
-            if kind == "asr"
-            else "translation" + ("" if kind == "mt" else f" ({kind[3:5].upper()}→{kind[6:].upper()})")
-        )
-        self.event("info", f"loading {model} for {what}; the current model keeps running until it is ready")
-        threading.Thread(target=self._switch_worker, args=(kind, spec), name=f"switch-{kind}", daemon=True).start()
+        self.switching[kind] = key
+        what = "speech recognition" if kind == "speech" else "translation" + _dirs_text(self.MT_KINDS[kind], " (", ")")
+        self.event("info", f"loading {m.title} for {what}; the current model keeps running until it is ready")
+        threading.Thread(target=self._switch_worker, args=(kind, key), name=f"switch-{kind}", daemon=True).start()
 
-    def _mt_assign(self, kind: str, model: str) -> None:
+    def _mt_assign(self, kind: str, key: str) -> None:
         with self._mt_client_lock:
-            if kind == "mt":
-                self.store.update(mt_model=model, mt_model_en_tr=None, mt_model_tr_en=None)
+            if kind == "translation":
+                self.store.update(translation_model=key, translation_model_en_tr=None, translation_model_tr_en=None)
             else:
-                self.store.update(**{f"mt_model_{kind[3:]}": model})
+                self.store.update(**{self.MODEL_FIELDS[kind]: key})
             self._mt_prune()
         self.m_mt_ms.v.clear()
-        self.event("info", f"now using {model} for translation ({self._mt_dirs(model)})")
+        self.event(
+            "info", f"now using {models.get(key).title} for translation{_dirs_text(self._mt_dirs(key), ' (', ')')}"
+        )
 
-    def _switch_worker(self, kind: str, spec: dict) -> None:
-        factory = "eels.asr:create" if kind == "asr" else "eels.translate:create"
-        new = WorkerClient("asr" if kind == "asr" else "mt", factory, spec)
+    def _switch_worker(self, kind: str, key: str) -> None:
+        new = self._new_worker(key)
+        title = models.get(key).title
         try:
             new.start()
             ok = new.wait_ready(timeout=900)
             if not ok or self._shutdown.is_set():
-                err = new.status.errors[-1]["msg"] if new.status.errors else "did not load"
+                err = new.status.errors[-1].msg if new.status.errors else "did not load"
                 new.stop()
-                self.event("error", f"could not load {spec['model']} ({err}); keeping the current model")
+                self.event("error", f"could not load {title} ({err}); keeping the current model")
                 return
             new.status.restarts = 0
-            if kind == "asr":
+            if kind == "speech":
                 with self._engine_lock:  # no call is in flight on the old worker while we swap
                     old, self.asr = self.asr, new
                     self.engine.asr_ms.clear()  # step timing belongs to the old model
                     self.m_asr_ms.v.clear()
                 old.stop()
-                self.store.update(asr_model=spec["model"], asr_audio_ctx=spec["audio_ctx"])
-                self.event("info", f"now using {spec['model']} (window {spec['audio_ctx']})")
+                self.store.update(speech_model=key)
+                self.event("info", f"now using {title} for speech recognition")
             else:
                 with self._mt_client_lock:
-                    previous = self.mt_pool.get(spec["model"])
-                    self.mt_pool[spec["model"]] = new
+                    previous = self.mt_pool.get(key)
+                    self.mt_pool[key] = new
                 if previous is not None:
                     previous.stop()
-                self._mt_assign(kind, spec["model"])
+                self._mt_assign(kind, key)
         except Exception as exc:
             log.exception("model switch")
             self.event("error", f"model switch failed: {exc}")
@@ -495,6 +560,14 @@ class Pipeline:
                 except queue.Empty:
                     chunk = None
                 with self._engine_lock:
+                    if chunk is not None and self.cloud is not None:
+                        self._cloud_audio(chunk, t_mono)
+                    if self.active == "gemini":
+                        if chunk is not None:  # the local engine idles but keeps its timeline
+                            self.engine.stream_samples += len(chunk)
+                            self.clock = (self.engine.stream_t, t_mono)
+                        self.backlog_s = 0.0
+                        continue
                     if chunk is not None:
                         self.clock = (self.engine.stream_t + len(chunk) / SAMPLE_RATE, t_mono)
                         self.engine.process_chunk(chunk)
@@ -618,7 +691,7 @@ class Pipeline:
                 job, self._mt_interim = self._mt_interim, None
             else:
                 return
-        worker = self.mt_pool.get(mt_for(self.store.value, job.src, job.tgt))
+        worker = self.mt_pool.get(translation_model_for(self.store.value, job.src, job.tgt))
         if worker is None or not worker.ready:
             # The model for this direction is not loaded (yet): show the source text rather than nothing.
             if job.kind == "confirmed":
@@ -630,7 +703,7 @@ class Pipeline:
             self._translate_interim(job)
 
     def _call_mt(self, job: MTJob, timeout: float) -> str | None:
-        model = mt_for(self.store.value, job.src, job.tgt)
+        model = translation_model_for(self.store.value, job.src, job.tgt)
         worker = self.mt_pool.get(model)
         if worker is None:
             return None
@@ -672,22 +745,23 @@ class Pipeline:
         s = self.store.value
         try:
             self.transcript.append(
-                {
-                    "start": self.mono_to_wall(self.stream_to_mono(job.start_t)),
-                    "end": self.mono_to_wall(job.end_mono),
-                    "src": job.src,
-                    "tgt": job.tgt,
-                    "mode": s.spoken_language,
-                    "session": job.session,
-                    "source": job.text,
-                    "translation": text,
-                    "fallback": fallback,
-                    "corrections": job.corrections,
-                    "cut": job.reason,
-                    "delay_s": round(time.monotonic() - job.end_mono, 2),
-                    "asr_model": s.asr_model,
-                    "mt_model": job.model or mt_for(s, job.src, job.tgt),
-                }
+                TranscriptRecord(
+                    start=self.mono_to_wall(self.stream_to_mono(job.start_t)),
+                    end=self.mono_to_wall(job.end_mono),
+                    src=job.src,
+                    tgt=job.tgt,
+                    source=job.text,
+                    translation=text,
+                    engine="local",
+                    speech_model=self.asr.model_key or s.speech_model,
+                    translation_model=job.model or translation_model_for(s, job.src, job.tgt),
+                    mode=s.spoken_language,
+                    session=job.session,
+                    cut=job.reason,
+                    delay_s=round(time.monotonic() - job.end_mono, 2),
+                    fallback=fallback,
+                    corrections=job.corrections,
+                )
             )
         except Exception:
             log.exception("transcript write")
@@ -701,6 +775,237 @@ class Pipeline:
         if self.store.value.interim and self.display.set_interim(job.base, out, job.tgt, self.engine.clause_seq):
             self.m_delay_interim.add(time.monotonic() - job.end_mono)
 
+    # Gemini ---------------------------------------------------------------------
+    @property
+    def active(self) -> str:
+        """The engine whose subtitles are on screen."""
+        return "gemini" if self.cloud is not None and self.failover.active == "gemini" else "local"
+
+    def _agc(self) -> AutoGain:
+        return self.cloud_agc if self.active == "gemini" else self.engine.agc
+
+    def _in_speech(self) -> bool:
+        return self.cloud_gate.in_speech if self.active == "gemini" else self.engine.gate.in_speech
+
+    def _last_speech(self) -> float:
+        return self.cloud_last_speech if self.active == "gemini" else self.engine.last_speech
+
+    def _cloud_enable(self) -> None:
+        s = self.store.value
+        if not api_key():
+            self.event("error", "no Gemini key (Keychain item eels-gemini or GEMINI_API_KEY); using the local models")
+            return
+        self.cloud = GeminiLive(
+            self._cloud_input,
+            self._cloud_output,
+            self.event,
+            model=s.gemini_model,
+            instruction=self._gemini_instruction(),
+        )
+        self.failover = Failover()
+        self.sentencers = {}
+        self._cloud_open()
+        self.event("info", f"engine: {s.gemini_model} (local models on standby)")
+
+    def _local_workers(self) -> list[WorkerClient]:
+        return [self.asr, *self.mt_pool.values()]
+
+    @property
+    def local_parked(self) -> bool:
+        return self.asr.parked
+
+    def _apply_standby(self) -> None:
+        """Local models: loaded unless Gemini is on screen and the operator chose not to keep them."""
+        unload = self.active == "gemini" and not self.store.value.gemini_standby
+        changed = False
+        for w in self._local_workers():
+            if unload and not w.parked:
+                w.park()
+                changed = True
+            elif not unload and w.parked:
+                w.start()
+                changed = True
+        if changed:
+            self.event(
+                "info",
+                "local models unloaded; they load again if Gemini fails" if unload else "loading the local models",
+            )
+
+    def set_gemini_key(self, key: str) -> str:
+        """Save the Gemini key from the control panel and reconnect with it."""
+        store_key(key)
+        self.event("info", "Gemini key saved in the Keychain")
+        if key_source() == "environment":
+            return "Saved, but GEMINI_API_KEY in the environment is used instead while it is set."
+        if self.store.value.engine == "gemini":
+            self._cloud_disable()
+            self._cloud_enable()
+            self._apply_standby()
+        return "Saved in the Keychain."
+
+    def _gemini_instruction(self) -> str:
+        return hints.gemini_instruction(self.sessions, self.store.value.gemini_extra_instruction)
+
+    def set_gemini_extra(self, text: str) -> str:
+        """Operator's addition to Gemini's instruction (control panel). Applied by reconnecting
+        the sessions, about a second without subtitles. Returns the full instruction."""
+        text = text.strip()
+        if text != self.store.value.gemini_extra_instruction:
+            self.store.update(gemini_extra_instruction=text)
+            if self.cloud is not None:
+                self.cloud.instruction = self._gemini_instruction()
+                self.cloud.restart()
+            self.event("info", "Gemini instructions " + ("updated" if text else "reset") + "; Gemini reconnected")
+        return self._gemini_instruction()
+
+    def _cloud_disable(self) -> None:
+        if self.cloud is None:
+            return
+        with self._engine_lock:
+            cloud, self.cloud = self.cloud, None
+        cloud.shutdown()
+        self.display.drop_interim()
+        self.event("info", "engine: local models")
+
+    def _cloud_open(self) -> None:
+        """Open (or retarget) the live sessions for the current spoken language while running."""
+        if self.cloud is None or not self.running:
+            return
+        spoken = self.store.value.spoken_language
+        targets = targets_for(spoken)
+        for t in [t for t in self.sentencers if t not in targets]:
+            self.sentencers.pop(t)
+        self.cloud.set_targets(targets, echo=echo_for(spoken))
+
+    def _sentencer(self, target: str) -> Sentencer:
+        s = self.store.value
+        sn = self.sentencers.get(target)
+        if sn is None:
+            sn = self.sentencers[target] = Sentencer()
+        sn.max_words, sn.gap_s = s.sentence_max_words, s.sentence_gap_s
+        return sn
+
+    def _cloud_audio(self, chunk: np.ndarray, t_mono: float) -> None:
+        """Audio to Gemini, plus speech detection (failover, clear-after-silence) and a short
+        history the local engine can start from if it has to take over."""
+        assert self.cloud is not None
+        s = self.store.value
+        x = self.cloud_agc.process(chunk) if s.auto_gain else chunk
+        self.cloud.feed(x)
+        for frame, prob in self.cloud_vad.process(x):
+            self.cloud_gate.update(frame, prob)
+        dur = len(chunk) / SAMPLE_RATE
+        if self.cloud_gate.in_speech:
+            if self.cloud_gate.silence_s == 0.0:
+                self.cloud_last_speech = t_mono
+            if self.cloud_gate.silence_s < 0.5 and self.running:
+                self.cloud_speech_s += dur
+            if self.cloud_gate.silence_s >= s.utterance_end_s:
+                self.cloud_gate.end()
+        self.ring.append((chunk, t_mono))
+        while self.ring and t_mono - self.ring[0][1] > 4.0:
+            self.ring.popleft()
+
+    def _cloud_input(self, target: str, text: str, finished: bool, lang: str | None) -> None:
+        self._sentencer(target).add_source(text, (lang or "")[:2] or None, time.monotonic())
+
+    def _cloud_output(self, target: str, text: str, finished: bool, lang: str | None) -> None:
+        self.cloud_speech_s = 0.0
+        sn = self._sentencer(target)
+        done = sn.add_text(text, time.monotonic(), finished)
+        if self.active != "gemini":
+            return
+        for sent in done:
+            self._cloud_show(target, sent)
+        if self.store.value.interim:
+            tail = sn.interim()
+            if tail:
+                tail = self._names.correct(tail)[0]
+                base = self.cloud_seq + 1
+                if self.display.set_interim(base, tail, target, base):
+                    self.m_delay_interim.add(time.monotonic() - (sn.last_source_mono or time.monotonic()))
+
+    def _cloud_show(self, target: str, sent: Sentence) -> None:
+        s = self.store.value
+        src = sent.src_lang if sent.src_lang in ("en", "tr") else other(target)
+        text, corrections = self._names.correct(sent.text)
+        if src == "tr" and target == "en" and s.gender_neutral and sent.source:
+            text = neutralize(text, sent.source)
+        self.cloud_seq += 1
+        self.display.add_confirmed(self.cloud_seq, text, target)
+        now = time.monotonic()
+        self.m_delay_confirmed.add(now - sent.end_mono)
+        try:
+            self.transcript.append(
+                TranscriptRecord(
+                    start=self.mono_to_wall(sent.start_mono),
+                    end=self.mono_to_wall(now),
+                    src=src,
+                    tgt=target,
+                    source=sent.source,
+                    translation=text,
+                    engine="gemini",
+                    speech_model=s.gemini_model,
+                    translation_model=s.gemini_model,
+                    mode=s.spoken_language,
+                    session=self._session_title(),
+                    cut=sent.reason,
+                    delay_s=round(now - sent.end_mono, 2),
+                    corrections=corrections,
+                )
+            )
+        except Exception:
+            log.exception("transcript write")
+
+    def _cloud_tick(self, now: float) -> None:
+        """Housekeeping: close sentences after a pause, and switch engines when Gemini fails or recovers."""
+        for target, sn in list(self.sentencers.items()):
+            for sent in sn.tick(now):
+                if self.active == "gemini":
+                    self._cloud_show(target, sent)
+        if not self.running or self.cloud is None:
+            return
+        with self._engine_lock:  # the asr loop sees the switch and the replayed audio in order
+            cloud = self.cloud
+            if cloud is None:
+                return
+            change = self.failover.update(now, cloud.connected, cloud.last_output, self.cloud_speech_s)
+            if change == "local":
+                self._to_local(cloud)
+            elif change == "gemini":
+                self._to_gemini()
+
+    def _to_local(self, cloud: GeminiLive) -> None:
+        why = "disconnected" if not cloud.connected else f"no translation for {self.cloud_speech_s:.0f} s of speech"
+        self.event("warn", f"Gemini {why}; subtitles continue from the local models")
+        for w in self._local_workers():
+            if w.parked:
+                w.start()  # unloaded to save memory: about 3 s until they are ready
+        self.display.drop_interim()
+        for sn in self.sentencers.values():
+            sn.reset()
+        # Start the local engine a few seconds back so the sentence in progress is not lost.
+        eng = self.engine
+        eng.stream_samples = max(0, eng.stream_samples - sum(len(c) for c, _ in self.ring))
+        eng.vad.reset()
+        eng.gate.end()
+        eng.online.reset(eng.stream_t)
+        eng.last_asr_end = eng.online.buffer_end
+        eng.utt_lang = None
+        for c, t in list(self.ring):
+            self.clock = (eng.stream_t + len(c) / SAMPLE_RATE, t)
+            eng.process_chunk(c)
+        self.cloud_speech_s = 0.0
+
+    def _to_gemini(self) -> None:
+        self.engine.end_utterance(flush=True)  # the local sentence in progress still gets shown
+        for sn in self.sentencers.values():
+            sn.reset()  # Gemini's half sentence would repeat what the local engine showed
+        self.display.drop_interim()
+        self.event("info", "Gemini is back; subtitles from Gemini again")
+        if not self.store.value.gemini_standby:  # unloading waits for the processes: not under the lock
+            threading.Thread(target=self._apply_standby, name="standby", daemon=True).start()
+
     # Housekeeping ---------------------------------------------------------------
     def _housekeeping(self) -> None:
         last_status = 0.0
@@ -712,9 +1017,11 @@ class Pipeline:
                 s = self.store.value
                 # Clear after silence.
                 if not self.display.empty and now > self.display.hold_until:
-                    quiet = now - max(self.display.last_change, self.engine.last_speech)
+                    quiet = now - max(self.display.last_change, self._last_speech())
                     if quiet >= s.clear_after_s and not self._mt_confirmed:
                         self.display.clear()
+                if self.cloud is not None:
+                    self._cloud_tick(now)
                 if now - last_sched >= 5.0:
                     last_sched = now
                     self._schedule_tick()
@@ -728,12 +1035,12 @@ class Pipeline:
                         "type": "level",
                         "rms_db": round(level.rms_db, 1),
                         "peak_db": round(level.peak_db, 1),
-                        "speech": self.engine.gate.in_speech,
+                        "speech": self._in_speech(),
                     },
                 )
                 if now - last_status >= 0.5:
                     last_status = now
-                    self.publish("control", self.status())
+                    self.publish("control", self.status().to_json())
             except Exception:
                 log.exception("housekeeping")
             time.sleep(0.1)
@@ -773,10 +1080,14 @@ class Pipeline:
 
     def reload_schedule(self) -> None:
         self.sessions = sched.load()
+        if self.cloud is not None:
+            self.cloud.instruction = self._gemini_instruction()  # from the next connection
         self._schedule_tick()
 
     # Status ---------------------------------------------------------------------
     def keeping_up(self) -> bool:
+        if self.active == "gemini":
+            return self.cloud is not None and self.cloud.connected
         recent_skip = self.last_skip is not None and time.monotonic() - self.last_skip < 60
         mean = self.m_asr_ms.mean() or 0
         return (
@@ -786,7 +1097,7 @@ class Pipeline:
             and len(self._mt_confirmed) < 3
         )
 
-    def status(self) -> dict:
+    def status(self) -> st.Status:
         def r(x, n=2):
             return None if x is None else round(x, n)
 
@@ -798,58 +1109,82 @@ class Pipeline:
                 audio_error = "Microphone access is denied for this terminal app. Open System Settings > Privacy & Security > Microphone and enable it, then restart."
             elif level.all_zero_s > 3:
                 audio_error = "The input delivers pure silence (all zeros). Check microphone permission and the selected device/channel."
-            elif self.engine.agc.gain_db > 18:
-                audio_error = f"The input is very quiet (boosted by {self.engine.agc.gain_db:.0f} dB). Raise the level on the mixer or audio interface."
+            elif self._agc().gain_db > 18:
+                audio_error = f"The input is very quiet (boosted by {self._agc().gain_db:.0f} dB). Raise the level on the mixer or audio interface."
         s = self.store.value
-        return {
-            "type": "status",
-            "running": self.running,
-            "source": self.source,
-            "file": self.file_name,
-            "file_pos": r(self.player.position_s, 1) if self.player else None,
-            "device": self.capture.active_device["name"] if self.capture.active_device else None,
-            "audio_error": audio_error,
-            "mic_permission": mic,
-            "overflows": self.capture.overflows,
-            "gain_db": round(self.engine.agc.gain_db, 1),
-            "speech": self.engine.gate.in_speech,
-            "utt_lang": self.engine.utt_lang,
-            "last_lang": self.engine.last_lang,
-            "keeping_up": self.keeping_up(),
-            "backlog_s": r(self.backlog_s),
-            "skips": self.falling_behind_events,
-            "asr_ms": r(self.m_asr_ms.mean(), 0),
-            "asr_step_s": r(self.engine.step),
-            "mt_ms": r(self.m_mt_ms.mean(), 0),
-            "mt_queue": len(self._mt_confirmed),
-            "delay_interim_p50": r(self.m_delay_interim.p(0.5)),
-            "delay_interim_p95": r(self.m_delay_interim.p(0.95)),
-            "delay_confirmed_p50": r(self.m_delay_confirmed.p(0.5)),
-            "delay_confirmed_p95": r(self.m_delay_confirmed.p(0.95)),
-            "workers": [{**self.asr.status.as_dict(), "label": "Speech recognition"}]
-            + [
-                {**w.status.as_dict(), "label": f"Translation {self._mt_dirs(m)}", "model": m}
-                for m, w in list(self.mt_pool.items())
-            ],
-            "switching": dict(self.switching),
-            "session": self._session_dict(self.current_session),
-            "next_session": self._session_dict(self.next_session),
-            "events": list(self.events)[-12:],
-            "uptime_s": round(time.monotonic() - self.started_at),
-            "settings": s.model_dump(),
-        }
+        return st.Status(
+            run=st.Run(
+                running=self.running,
+                source="file" if self.source == "file" else "live",
+                file=self.file_name,
+                file_pos_s=r(self.player.position_s, 1) if self.player else None,
+                uptime_s=round(time.monotonic() - self.started_at),
+            ),
+            audio=st.Audio(
+                device=self.capture.active_device["name"] if self.capture.active_device else None,
+                error=audio_error,
+                mic_permission=mic,
+                overflows=self.capture.overflows,
+                gain_db=round(self._agc().gain_db, 1),
+                speech=self._in_speech(),
+            ),
+            engine=st.EngineState(
+                chosen=s.engine, on_screen=self.active, keeping_up=self.keeping_up(), gemini_key=key_source()
+            ),
+            delays=st.Delays(
+                first_p50=r(self.m_delay_interim.p(0.5)),
+                first_p95=r(self.m_delay_interim.p(0.95)),
+                final_p50=r(self.m_delay_confirmed.p(0.5)),
+                final_p95=r(self.m_delay_confirmed.p(0.95)),
+            ),
+            local=st.LocalTiming(
+                speech_ms=r(self.m_asr_ms.mean(), 0),
+                step_s=round(self.engine.step, 2),
+                translation_ms=r(self.m_mt_ms.mean(), 0),
+                translation_queue=len(self._mt_confirmed),
+                backlog_s=round(self.backlog_s, 2),
+                skips=self.falling_behind_events,
+            ),
+            models=[self._model_status(self.asr)] + [self._model_status(w) for w in list(self.mt_pool.values())],
+            switching=dict(self.switching),
+            gemini=self.cloud.status() if self.cloud else None,
+            talk_now=self._talk(self.current_session),
+            talk_next=self._talk(self.next_session),
+            events=list(self.events)[-12:],
+            settings=s.model_dump(),
+        )
+
+    def _model_status(self, w: WorkerClient) -> st.ModelStatus:
+        """One local model for the panel: which model, what it is doing, measured memory."""
+        m = models.get(w.model_key or "")
+        if w.parked:
+            role: st.Role = "unloaded"
+        elif self.active == "gemini":
+            role = "backup"
+        else:
+            role = "in use" if self.running else "idle"
+        loading = w.loading_s
+        rss = w.rss_mb() if w.alive else None
+        directions = [f"{a}>{b}" for a, b in self._mt_dirs(m.key)] if m.job == "translation" else []
+        return st.ModelStatus(
+            job=m.job,
+            key=m.key,
+            name=m.name,
+            variant=m.variant,
+            directions=directions,
+            state=w.status.state,
+            role=role,
+            loading_s=None if loading is None else round(loading),
+            memory_gb=None if rss is None else round(rss / 1024, 1),
+            restarts=w.status.restarts,
+            last_error=w.status.errors[-1] if w.status.errors else None,
+        )
 
     @staticmethod
-    def _session_dict(x: sched.Session | None) -> dict | None:
+    def _talk(x: sched.Session | None) -> st.Talk | None:
         if not x:
             return None
-        return {
-            "start": x.start[11:16],
-            "end": (x.end or "")[11:16],
-            "title": x.title,
-            "speaker": x.speaker,
-            "lang": x.lang,
-        }
+        return st.Talk(start=x.start[11:16], end=(x.end or "")[11:16], title=x.title, speaker=x.speaker, lang=x.lang)
 
     def health(self) -> dict:
         return {
@@ -857,7 +1192,8 @@ class Pipeline:
             "running": self.running,
             "uptime_s": round(time.monotonic() - self.started_at),
             "keeping_up": self.keeping_up(),
-            "asr": self.asr.status.state,
-            "mt": "ready" if self.mt_ready else ", ".join(w.status.state for w in self.mt_pool.values()),
+            "engine": self.active,
+            "gemini": "connected" if self.cloud and self.cloud.connected else ("off" if not self.cloud else "down"),
+            "models": {w.model_key: w.status.state for w in [self.asr, *self.mt_pool.values()]},
             "delay_confirmed_p50": self.m_delay_confirmed.p(0.5),
         }

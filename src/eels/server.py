@@ -136,7 +136,7 @@ def create_app(hub: Hub, pipeline: Pipeline) -> FastAPI:
         await ws.accept()
         q: asyncio.Queue = asyncio.Queue(maxsize=50)
         hub.clients["control"].add(q)
-        q.put_nowait(json.dumps(pipeline.status(), ensure_ascii=False))
+        q.put_nowait(json.dumps(pipeline.status().to_json(), ensure_ascii=False))
         q.put_nowait(json.dumps({"type": "devices", "devices": list_input_devices()}))
         q.put_nowait(
             json.dumps({"type": "schedule", "sessions": [s.__dict__ for s in pipeline.sessions]}, ensure_ascii=False)
@@ -148,7 +148,7 @@ def create_app(hub: Hub, pipeline: Pipeline) -> FastAPI:
                 try:
                     reply = await asyncio.to_thread(handle_command, msg)
                 except Exception as exc:
-                    log.exception("control command %s", msg)
+                    log.exception("control command %s", msg.get("cmd"))  # never the payload (keys)
                     reply = {"type": "error", "msg": str(exc)}
                 if reply:
                     await ws.send_text(json.dumps(reply, ensure_ascii=False))
@@ -181,11 +181,23 @@ def create_app(hub: Hub, pipeline: Pipeline) -> FastAPI:
         elif cmd == "live":
             pipeline.use_live()
         elif cmd == "models":
-            from .models import catalog
+            from .models import panel_catalog
 
-            return {"type": "models", **catalog()}
+            return {"type": "models", **panel_catalog()}
+        elif cmd == "gemini_key":
+            try:
+                return {"type": "gemini_key", "ok": True, "msg": pipeline.set_gemini_key(str(msg.get("key", "")))}
+            except (ValueError, RuntimeError) as exc:
+                return {"type": "gemini_key", "ok": False, "msg": str(exc)}
+        elif cmd == "gemini_instruction":
+            # {"extra": text} applies (the panel asks for confirmation first); without it, only reads.
+            if "extra" in msg:
+                full = pipeline.set_gemini_extra(str(msg["extra"]))
+            else:
+                full = pipeline._gemini_instruction()
+            return {"type": "gemini_instruction", "text": full, "extra": pipeline.store.value.gemini_extra_instruction}
         elif cmd == "switch_model":
-            pipeline.switch_model(msg["kind"], msg["model"], msg.get("audio_ctx"))
+            pipeline.switch_model(msg["kind"], msg["key"])
         elif cmd == "update_schedule":
             sessions = sched.fetch_agenda()
             sched.save(sessions, sched.OVERRIDE)

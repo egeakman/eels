@@ -2,6 +2,7 @@
 
   uv run python -m eels.bench.captioned fetch     # audio excerpts + captions (yt-dlp via uvx)
   uv run python -m eels.bench.captioned run       # streaming vs offline WER, translations
+  uv run python -m eels.bench.captioned run --gemini [--asr whisper-turbo-15s --mt opus-mt]   # Gemini Live Translate
 
 Unlike the main benchmark (agreement with Whisper large-v3), this measures real accuracy.
 """
@@ -16,12 +17,12 @@ import sys
 import time
 
 from ..config import VAR_DIR
+from .clips import Clip
 
 DIR = VAR_DIR / "bench-captioned"
 
-# name, spoken language, YouTube id, excerpt start, end (s), description
-SOURCES = [
-    (
+SOURCES: list[Clip] = [
+    Clip(
         "en_shafak",
         "en",
         "Zq7QPnqLoUk",
@@ -29,7 +30,7 @@ SOURCES = [
         360,
         "Elif Shafak, TED: English by a Turkish speaker (human EN + TR captions)",
     ),
-    (
+    Clip(
         "en_ozkan",
         "en",
         "7TacjjISZgs",
@@ -37,7 +38,7 @@ SOURCES = [
         330,
         "Umit Ozkan, TEDx Ohio State: English by a Turkish-born engineer (human EN captions)",
     ),
-    (
+    Clip(
         "tr_llm",
         "tr",
         "fnxX-1J6Z24",
@@ -45,7 +46,7 @@ SOURCES = [
         270,
         "Sifirdan LLM Gelistirme course intro: technical Turkish (human TR captions)",
     ),
-    (
+    Clip(
         "tr_turer",
         "tr",
         "eEbQ70pHxHE",
@@ -53,14 +54,18 @@ SOURCES = [
         360,
         "Ahmet Turer, TEDxMETUAnkara: Turkish engineering talk (human TR captions)",
     ),
-    ("tr_tonguc", "tr", "AbbEtiZbnac", 120, 360, "Saffet Emre Tonguc, TEDxIstanbul: Turkish talk (human TR captions)"),
+    Clip(
+        "tr_tonguc", "tr", "AbbEtiZbnac", 120, 360, "Saffet Emre Tonguc, TEDxIstanbul: Turkish talk (human TR captions)"
+    ),
 ]
 
 # Realistic event-like talks chosen by the organiser; no human captions, so they are judged by
 # reading the timestamped side by side (and listening to the video at those times).
-UNCAPTIONED = [
-    ("en_gunduz", "en", "Q9pIcLXcjMU", 60, 300, "Ayse Bilge Gunduz, WomenTech: English by a Turkey-based developer"),
-    (
+UNCAPTIONED: list[Clip] = [
+    Clip(
+        "en_gunduz", "en", "Q9pIcLXcjMU", 60, 300, "Ayse Bilge Gunduz, WomenTech: English by a Turkey-based developer"
+    ),
+    Clip(
         "en_ayci",
         "en",
         "ZhN1s9sVUWw",
@@ -68,8 +73,8 @@ UNCAPTIONED = [
         105,
         "Gonul Ayci, PyCon DE lightning talk: English by a Turkey-based developer",
     ),
-    ("tr_saati85", "tr", "UVrpwJ2jhZU", 1080, 1320, "Python Saati #85 (pyistanbul), from 18:00: Turkish tech talk"),
-    (
+    Clip("tr_saati85", "tr", "UVrpwJ2jhZU", 1080, 1320, "Python Saati #85 (pyistanbul), from 18:00: Turkish tech talk"),
+    Clip(
         "tr_saati102",
         "tr",
         "dBY1f3tj3mM",
@@ -163,23 +168,89 @@ def fetch() -> int:
     return 0
 
 
-def run(asr_names: list[str] | None = None, mt_names: list[str] | None = None, only: list[str] | None = None) -> int:
+def gemini_clip(audio, lang: str, speed: float = 1.0, settle_s: float = 6.0) -> dict:
+    """Stream one clip to Gemini Live Translate in real time, as the app does."""
+    from .. import hints
+    from .. import schedule as sched
+    from ..cloud import FRAME_SAMPLES, GeminiLive, Sentencer
+
+    target = "tr" if lang == "en" else "en"
+    sn = Sentencer()
+    sources: list[str] = []
+    done = []
+    events: list = []
+    last_text = [0.0]
+
+    def on_input(_tgt, text, _finished, code):
+        sources.append(text)
+        sn.add_source(text, code, time.monotonic())
+
+    def on_output(_tgt, text, finished, _code):
+        last_text[0] = time.monotonic()
+        done.extend((time.monotonic(), s) for s in sn.add_text(text, time.monotonic(), finished))
+
+    g = GeminiLive(
+        on_input,
+        on_output,
+        lambda level, msg: events.append((level, msg)),
+        instruction=hints.gemini_instruction(sched.load()),  # as the app does
+    )
+    try:
+        g.set_targets([target], echo=True)  # as the app does for a talk with a fixed language
+        t_end = time.monotonic() + 20
+        while not g.connected and time.monotonic() < t_end:
+            time.sleep(0.1)
+        t0 = time.monotonic()
+        for i in range(0, len(audio), FRAME_SAMPLES):
+            g.feed(audio[i : i + FRAME_SAMPLES])
+            wait = t0 + (i + FRAME_SAMPLES) / 16000 / speed - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
+        audio_end = time.monotonic()
+        while time.monotonic() - max(last_text[0], audio_end) < settle_s:
+            time.sleep(0.2)
+            done.extend((time.monotonic(), s) for s in sn.tick(time.monotonic()))
+        done.extend((time.monotonic(), s) for s in sn.tick(float("inf")))
+        status = g.status()
+    finally:
+        g.shutdown()
+    joiner = "" if any(s[:1].isspace() for s in sources) else " "
+    delays = sorted(at - s.end_mono for at, s in done)
+    return {
+        "source": joiner.join(sources).strip(),
+        "sentences": [(s.start_mono - t0, s.text, s.source) for _, s in done],
+        "delay_p50": delays[len(delays) // 2] if delays else None,
+        "tail_s": round(last_text[0] - audio_end, 2) if last_text[0] else None,
+        "status": status,
+        "events": events,
+    }
+
+
+def run(
+    asr_names: list[str] | None = None,
+    mt_names: list[str] | None = None,
+    only: list[str] | None = None,
+    gemini: bool = False,
+) -> int:
     """Score every ASR candidate (live streaming and offline) against the human captions, then
-    translate the best live transcript with every MT candidate (chrF vs the human TR captions)."""
+    translate the best live transcript with every MT candidate (chrF vs the human TR captions).
+    With gemini=True, also stream each clip through Gemini Live Translate (in real time)."""
     import os
 
     import jiwer
     import sacrebleu
 
+    from .. import models
     from ..audio import load_audio_file
     from ..gender import neutralize
     from ..workers import WorkerClient
-    from . import candidates
     from .benchmark import machine_info, norm_text, save_findings, simulate_asr
 
     os.environ["HF_HUB_OFFLINE"] = "1"
-    asr_names = asr_names or ["turbo-750"]
-    mt_names = mt_names or ["opus-mt"]
+    if gemini and asr_names is None and mt_names is None:
+        asr_names, mt_names = [], []  # Gemini only
+    asr_names = [models.DEFAULT_SPEECH] if asr_names is None else asr_names
+    mt_names = ["opus-mt"] if mt_names is None else mt_names
     clips = []
     for name, lang, vid, start, end, desc in ALL:
         if only and name not in only:
@@ -208,10 +279,40 @@ def run(asr_names: list[str] | None = None, mt_names: list[str] | None = None, o
             }
         )
 
-    results = {"machine": machine_info(), "asr": {}, "mt": {}}
+    results = {"machine": machine_info(), "asr": {}, "mt": {}, "gemini": {}}
+    run_dir = DIR / f"run-{time.strftime('%Y%m%d-%H%M%S')}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    def save() -> None:  # after every Gemini clip too, so an interrupted run keeps what it measured
+        (run_dir / "results.json").write_text(json.dumps(results, indent=2, ensure_ascii=False, default=str))
+        (run_dir / "report.md").write_text(captioned_report(results, clips))
+
+    if gemini:
+        from ..cloud import api_key
+
+        if not api_key():
+            print("No Gemini key: store it in the Keychain (README, Gemini engine) or set GEMINI_API_KEY.")
+            return 1
+        for c in clips:
+            r = gemini_clip(c["audio"], c["lang"])
+            if c["ref"]:
+                r["wer"] = jiwer.wer(norm_text(c["ref"]), norm_text(r["source"]))
+            if c["ref_tr"]:
+                r["chrf_vs_human"] = sacrebleu.corpus_chrf(
+                    [" ".join(t for _, t, _ in r["sentences"])], [[c["ref_tr"]]]
+                ).score
+            results["gemini"][c["name"]] = r
+            save()
+            wer = f"{r['wer']:6.1%}" if "wer" in r else "   n/a"
+            chrf = f", chrF vs human Turkish {r['chrf_vs_human']:.1f}" if "chrf_vs_human" in r else ""
+            print(
+                f"gemini         {c['name']:12} WER {wer}{chrf}, {len(r['sentences'])} subtitles, "
+                f"delay after source text {r['delay_p50']} s, last text {r['tail_s']} s after the audio ended",
+                flush=True,
+            )
     best_text: dict[str, tuple[float, str]] = {}
     for cand in asr_names:
-        spec, _note = candidates.ASR[cand]
+        spec = models.get(cand).spec
         asr = WorkerClient("asr", "eels.asr:create", spec)
         asr.start()
         if not asr.wait_ready(900):
@@ -263,7 +364,7 @@ def run(asr_names: list[str] | None = None, mt_names: list[str] | None = None, o
 
     corrector = NameCorrector(protect)  # the whole program: stricter than live, where only nearby talks count
     for cand in mt_names:
-        spec, _note = candidates.MT[cand]
+        spec = models.get(cand).spec
         mt = WorkerClient("mt", "eels.translate:create", spec)
         mt.start()
         if not mt.wait_ready(900):
@@ -295,10 +396,7 @@ def run(asr_names: list[str] | None = None, mt_names: list[str] | None = None, o
             results["mt"].setdefault(cand, {})[c["name"]] = row
         mt.stop()
 
-    run_dir = DIR / f"run-{time.strftime('%Y%m%d-%H%M%S')}"
-    run_dir.mkdir(parents=True, exist_ok=True)
-    (run_dir / "results.json").write_text(json.dumps(results, indent=2, ensure_ascii=False, default=str))
-    (run_dir / "report.md").write_text(captioned_report(results, clips))
+    save()
     print(
         f"report: {run_dir / 'report.md'}; copied to {save_findings(run_dir, results['machine'], ('report.md',))} (tracked in git)"
     )
@@ -320,6 +418,9 @@ def captioned_report(results: dict, clips: list[dict]) -> str:
         "|---|---|---|---|---|",
     ]
     desc = {c["name"]: c["desc"] for c in clips}
+    for name, r in results.get("gemini", {}).items():
+        if "wer" in r:
+            lines.append(f"| gemini (input transcript) | {desc[name]} | {r['wer']:.1%} | - | - |")
     for cand, rows in results["asr"].items():
         for name, r in rows.items():
             if r["wer_stream"] is None:
@@ -340,9 +441,26 @@ def captioned_report(results: dict, clips: list[dict]) -> str:
             "|---|---|---|---|",
         ]
         lines += [f"| {c} | {desc[n]} | {v:.1f} | {ms:.0f} |" for c, n, v, ms in chrf]
+    gem = results.get("gemini", {})
+    if gem:
+        lines += [
+            "",
+            "| Gemini | Talk | chrF vs human Turkish | delay after source text (p50) | last text after audio end |",
+            "|---|---|---|---|---|",
+        ]
+        for name, r in gem.items():
+            chrf_v = f"{r['chrf_vs_human']:.1f}" if "chrf_vs_human" in r else "-"
+            lines.append(f"| gemini | {desc[name]} | {chrf_v} | {r['delay_p50']} s | {r['tail_s']} s |")
     lines += ["", "## Subtitles: what was heard live (best speech model) and each translation", ""]
     for c in clips:
         lines += [f"### {c['desc']}", ""]
+        if c["name"] in gem:
+            lines += ["Gemini Live Translate (its own sentences; source = its input transcript):", ""]
+            for t0, text, src in gem[c["name"]]["sentences"][:40]:
+                t = c["start"] + t0
+                lines.append(f"- [{int(t // 60)}:{int(t % 60):02d}] **{src or '...'}**")
+                lines.append(f"  - `gemini`: {text}")
+            lines.append("")
         per_model = {cand: rows[c["name"]]["pairs"] for cand, rows in results["mt"].items() if c["name"] in rows}
         if not per_model:
             continue
@@ -364,8 +482,9 @@ if __name__ == "__main__":
 
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("action", choices=["fetch", "run"])
-    ap.add_argument("--asr", nargs="*", help="speech candidates (bench/candidates.py), default turbo-750")
+    ap.add_argument("--asr", nargs="*", help="speech models by key (models.py), default whisper-turbo-15s")
     ap.add_argument("--mt", nargs="*", help="translation candidates, default opus-mt")
     ap.add_argument("--clips", nargs="*", help="only these clips (e.g. en_shafak)")
+    ap.add_argument("--gemini", action="store_true", help="Gemini Live Translate (needs the Gemini key; real time)")
     a = ap.parse_args()
-    sys.exit(fetch() if a.action == "fetch" else run(a.asr, a.mt, a.clips))
+    sys.exit(fetch() if a.action == "fetch" else run(a.asr, a.mt, a.clips, a.gemini))

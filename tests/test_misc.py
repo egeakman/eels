@@ -2,7 +2,8 @@ from datetime import date, datetime
 
 from eels import schedule as sched
 from eels.config import Settings, SettingsStore
-from eels.transcript import TranscriptLog, export_srt, parse_clock
+from eels.hints import gemini_instruction
+from eels.transcript import TranscriptLog, TranscriptRecord, export_srt, parse_clock
 from eels.translate import check_translation, clean_output
 
 AGENDA = """
@@ -39,23 +40,31 @@ def test_bundled_schedule_loads():
     assert {"en", "tr"} <= {s.lang for s in sessions}
 
 
+def record(day, start, end, source, translation, **kw):
+    fields = {
+        "src": "en",
+        "tgt": "tr",
+        "engine": "local",
+        "speech_model": "whisper-turbo-15s",
+        "translation_model": "opus-mt",
+        "mode": "en",
+        "session": None,
+        "cut": "sentence",
+        "delay_s": 1.0,
+    }
+    return TranscriptRecord(
+        parse_clock(day, start), parse_clock(day, end), source=source, translation=translation, **(fields | kw)
+    )
+
+
 def test_transcript_and_srt(tmp_path):
     log = TranscriptLog(tmp_path)
     day = date(2026, 11, 14)
-    a = parse_clock(day, "11:15:02")
-    log.append({"start": a, "end": parse_clock(day, "11:15:04"), "source": "Hello", "translation": "Merhaba"})
-    log.append(
-        {
-            "start": parse_clock(day, "11:15:03"),
-            "end": parse_clock(day, "11:15:06"),
-            "source": "world",
-            "translation": "dünya",
-        }
-    )
-    log.append(
-        {"start": parse_clock(day, "12:00:00"), "end": parse_clock(day, "12:00:02"), "source": "x", "translation": "y"}
-    )
+    log.append(record(day, "11:15:02", "11:15:04", "Hello", "Merhaba", corrections=[("PyIstanbul", "PyIstanbul")]))
+    log.append(record(day, "11:15:03", "11:15:06", "world", "dünya", engine="gemini"))
+    log.append(record(day, "12:00:00", "12:00:02", "x", "y"))
     recs = log.read(day)
+    assert recs[0].corrections == [("PyIstanbul", "PyIstanbul")] and recs[1].engine == "gemini"
     assert len(recs) == 3
     srt = export_srt(recs, parse_clock(day, "11:15"), parse_clock(day, "11:40"), text="both", offset_s=1.0)
     assert srt.startswith("1\n00:00:03,000 --> 00:00:04,000\nMerhaba\nHello\n")  # clipped to next cue start
@@ -110,11 +119,76 @@ def test_untranslated_code_switching_is_accepted():
 
 
 def test_translation_model_per_direction():
-    from eels.config import mt_for
+    from eels.config import translation_model_for as model_for
 
-    s = Settings(mt_model="opus-mt")
-    assert mt_for(s, "en", "tr") == "opus-mt" and mt_for(s, "tr", "en") == "opus-mt"
-    s = Settings(mt_model="opus-mt", mt_model_en_tr="tg12b")
-    assert mt_for(s, "en", "tr") == "tg12b" and mt_for(s, "tr", "en") == "opus-mt"
-    s = Settings(mt_model="opus-mt", mt_model_tr_en="hymt7b")
-    assert mt_for(s, "en", "tr") == "opus-mt" and mt_for(s, "tr", "en") == "hymt7b"
+    s = Settings(translation_model="opus-mt")
+    assert model_for(s, "en", "tr") == "opus-mt" and model_for(s, "tr", "en") == "opus-mt"
+    s = Settings(translation_model="opus-mt", translation_model_en_tr="translategemma-12b")
+    assert model_for(s, "en", "tr") == "translategemma-12b" and model_for(s, "tr", "en") == "opus-mt"
+
+
+def test_old_transcript_lines_still_read(tmp_path):
+    day = date(2026, 11, 9)
+    (tmp_path / "2026-11-09.jsonl").write_text(
+        '{"start": "2026-11-09T11:15:02.000+03:00", "end": "2026-11-09T11:15:04.000+03:00", "src": "en", "tgt": "tr",'
+        ' "source": "Hi", "translation": "Selam", "asr_model": "mlx-community/whisper-large-v3-turbo", "mt_model": "opus-mt"}\n'
+        "{broken line\n"
+    )
+    (r,) = TranscriptLog(tmp_path).read(day)
+    assert r.engine == "local" and r.translation_model == "opus-mt" and r.speech_model.endswith("turbo")
+
+
+def test_model_catalog_is_consistent():
+    from eels import models
+
+    assert models.get(models.DEFAULT_SPEECH).job == "speech"
+    assert models.get(models.DEFAULT_TRANSLATION).job == "translation"
+    for m in models.CATALOG:
+        assert m.name and "(" not in m.name and "(" not in m.variant  # descriptions go in note
+        assert m.spec.get("model") and (m.repos or m.conversion)
+    assert len(models.BY_KEY) == len(models.CATALOG)  # keys are unique
+
+
+def test_old_settings_are_migrated(tmp_path):
+    import json
+
+    from eels.config import SettingsStore
+
+    path = tmp_path / "settings.json"
+    path.write_text(
+        json.dumps(
+            {
+                "asr_model": "mlx-community/whisper-large-v3-turbo",
+                "asr_audio_ctx": "full",
+                "mt_model": "opus-mt",
+                "mt_model_en_tr": "/old/place/HY-MT1.5-7B-mlx-4bit",
+                "font_size": 50,
+            }
+        )
+    )
+    s = SettingsStore(path).value
+    assert (s.speech_model, s.translation_model, s.translation_model_en_tr) == (
+        "whisper-turbo-30s",
+        "opus-mt",
+        "hymt-7b",
+    )
+    assert s.font_size == 50
+    path.write_text(json.dumps({"speech_model": "gone-model"}))
+    assert SettingsStore(path).value.speech_model == "whisper-turbo-15s"
+
+
+def test_gemini_instruction_carries_the_program():
+    text = gemini_instruction(sched.load())
+    assert "Lysandros Nikolaou" in text and "PyIstanbul" in text
+    assert "eee" in text  # no filler sounds
+    assert "call for proposals = konuşma başvuruları" in text and "sprint = sprint" in text and "_comment" not in text
+
+
+def test_panel_catalog_lists_models_without_network(monkeypatch):
+    from eels import models
+
+    monkeypatch.setenv("HF_HUB_OFFLINE", "1")
+    c = models.panel_catalog()
+    assert next(o["key"] for o in c["speech"]) == models.DEFAULT_SPEECH
+    assert all(isinstance(o["available"], bool) and o["title"] for o in c["speech"] + c["translation"])
+    assert "opus-mt-beam4" not in [o["key"] for o in c["translation"]]  # benchmark-only

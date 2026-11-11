@@ -13,8 +13,8 @@ import threading
 import time
 from datetime import date
 
+from . import models
 from .config import LOG_DIR, SettingsStore
-from .models import expand_models, models_present
 
 PORT = 8000
 
@@ -76,11 +76,19 @@ def cmd_run(args) -> int:
         os.environ["HF_HUB_OFFLINE"] = "1"
     store = SettingsStore()
     s = store.value
-    missing = models_present([s.asr_model, s.mt_model])
+    missing = models.missing([s.speech_model, s.translation_model])
     if missing:
         print("These models are not downloaded yet:\n  " + "\n  ".join(missing))
         print("Run `uv run eels download-models` while online, then start again.")
         return 1
+    if s.engine == "gemini":
+        from .cloud import api_key
+
+        if not api_key():
+            print(
+                "Engine is Gemini but no key was found: running on the local models. "
+                "Set the key in the control panel (Setup, Gemini)."
+            )
     if not port_free(PORT):
         print(f"Port {PORT} is already in use. Is another copy of eels running? (lsof -i :{PORT})")
         return 1
@@ -107,12 +115,12 @@ def cmd_run(args) -> int:
 
         def play_when_ready():
             print("Loading models before playing the file...", flush=True)
-            while not (pipeline.asr.ready and pipeline.mt_ready):
+            while not (pipeline.local_parked or (pipeline.asr.ready and pipeline.mt_ready)):
                 time.sleep(0.5)
             pipeline.play_file(args.play, speed=args.speed)
 
         threading.Thread(target=play_when_ready, daemon=True).start()
-    elif not args.no_autostart:
+    elif args.autostart:
         pipeline.start()
 
     config = uvicorn.Config(
@@ -147,74 +155,62 @@ def cmd_download_models(args) -> int:
 
     from .translate import OpusMtTranslator
 
-    store = SettingsStore()
-    s = store.value
-    repos = expand_models([s.asr_model, s.mt_model, "opus-mt"])  # Opus-MT is small and always kept as a fallback
-    hymt_sizes: list[str] = []
-    if args.all or args.include:
-        from .bench import candidates as c
-
-        asr = c.LEAN_ASR if args.all else []
-        mt = c.LEAN_MT if args.all else []
-        for name in args.include or []:
-            if name in c.ASR:
-                asr.append(name)
-            elif name in c.MT:
-                mt.append(name)
-            else:
-                print(f"Unknown candidate {name!r}. Speech: {', '.join(c.ASR)}. Translation: {', '.join(c.MT)}.")
-                return 1
-        repos += c.model_repos(asr, mt)
-        hymt_sizes = [n for n in ("hymt1.8b", "hymt7b") if n in mt]
-    for repo in dict.fromkeys(repos):
+    s = SettingsStore().value
+    keys = [s.speech_model, s.translation_model, models.DEFAULT_TRANSLATION]  # Opus-MT: small, always the fallback
+    keys += [k for k in (s.translation_model_en_tr, s.translation_model_tr_en) if k]
+    if args.all:
+        keys += [m.key for m in models.CATALOG if m.lean] + [models.REFERENCE_SPEECH]
+    for key in args.include or []:
+        if key not in models.BY_KEY:
+            print(f"Unknown model {key!r}. Known: {', '.join(models.BY_KEY)}.")
+            return 1
+        keys.append(key)
+    wanted = [models.get(k) for k in dict.fromkeys(keys)]
+    for repo in dict.fromkeys(r for m in wanted for r in m.repos):
         print(f"Downloading {repo} ...", flush=True)
-        snapshot_download(repo, allow_patterns=OpusMtTranslator.FILES if repo.startswith("Helsinki-NLP/") else None)
+        snapshot_download(repo, allow_patterns=OpusMtTranslator.FILES if repo in models.OPUS_REPOS else None)
     print("Preparing Opus-MT (CTranslate2 conversion) ...", flush=True)
     OpusMtTranslator()
-    if hymt_sizes:
-        prepare_hymt(hymt_sizes)
+    for m in wanted:
+        if m.conversion:
+            convert_to_mlx(m.conversion)
     print("Done. The app can now run without internet.")
     return 0
 
 
-def prepare_hymt(names: list[str]) -> None:
-    """Tencent HY-MT has no MLX build on Hugging Face: download, convert to MLX into
-    ~/.cache/eels/, then delete the original download (4 GB for 1.8B, 15 GB for 7B).
-    1.8B is converted to 8-bit; 7B to 4-bit (about twice as fast, half the size)."""
+def convert_to_mlx(c: models.Conversion) -> None:
+    """For models with no MLX build on Hugging Face (Tencent HY-MT): download, convert to MLX into
+    ~/.cache/eels/, then delete the original download (4 GB for 1.8B, 15 GB for 7B)."""
     import shutil
 
     from huggingface_hub import scan_cache_dir, snapshot_download
 
     from .config import MODEL_DIR
 
-    for size, bits in (("1.8B", 8), ("7B", 4)):
-        if f"hymt{size.lower()}" not in names:
-            continue
-        out = MODEL_DIR / f"HY-MT1.5-{size}-mlx-{bits}bit"
-        if (out / "config.json").exists():
-            continue
-        repo = f"tencent/HY-MT1.5-{size}"
-        print(f"Downloading and converting {repo} to MLX {bits}-bit ...", flush=True)
-        snapshot_download(repo)
-        subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "mlx_lm",
-                "convert",
-                "--hf-path",
-                repo,
-                "--mlx-path",
-                str(out),
-                "-q",
-                "--q-bits",
-                str(bits),
-            ],
-            check=True,
-        )
-        for r in scan_cache_dir().repos:
-            if r.repo_id == repo:
-                shutil.rmtree(r.repo_path, ignore_errors=True)  # the converted copy is all we use
+    out = MODEL_DIR / c.folder
+    if (out / "config.json").exists():
+        return
+    print(f"Downloading and converting {c.source} to MLX {c.bits}-bit ...", flush=True)
+    snapshot_download(c.source)
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "mlx_lm",
+            "convert",
+            "--hf-path",
+            c.source,
+            "--mlx-path",
+            str(out),
+            "-q",
+            "--q-bits",
+            str(c.bits),
+        ],
+        check=True,
+    )
+    for r in scan_cache_dir().repos:
+        if r.repo_id == c.source:
+            shutil.rmtree(r.repo_path, ignore_errors=True)  # the converted copy is all we use
 
 
 def cmd_export_srt(args) -> int:
@@ -265,7 +261,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = p.add_subparsers(dest="command")
 
     def add_run_args(sp):
-        sp.add_argument("--no-autostart", action="store_true", help="wait for Start in the control panel")
+        sp.add_argument("--autostart", action="store_true", help="start listening right away (default: wait for Start)")
         sp.add_argument("--online", action="store_true", help="allow Hugging Face network access")
         sp.add_argument("-v", "--verbose", action="store_true")
 
@@ -287,7 +283,7 @@ def main(argv: list[str] | None = None) -> int:
         "--include",
         nargs="*",
         metavar="CANDIDATE",
-        help="extra benchmark candidates, e.g. tg27b medium-750 (see bench/candidates.py)",
+        help="extra models by key, e.g. translategemma-27b whisper-medium (see models.py)",
     )
     d.set_defaults(func=cmd_download_models)
 
@@ -305,9 +301,9 @@ def main(argv: list[str] | None = None) -> int:
     u.set_defaults(func=cmd_update_schedule)
 
     b = sub.add_parser("benchmark", help="measure models on this Mac")
-    b.add_argument("--asr", nargs="*", help="ASR candidates (names from bench/candidates.py)")
-    b.add_argument("--mt", nargs="*", help="MT candidates")
-    b.add_argument("--pipeline", nargs="*", help="end-to-end runs: ASR_NAME+MT_NAME")
+    b.add_argument("--asr", nargs="*", help="speech models by key (see models.py)")
+    b.add_argument("--mt", nargs="*", help="translation models by key")
+    b.add_argument("--pipeline", nargs="*", help="end-to-end runs: SPEECH_KEY+TRANSLATION_KEY")
     b.add_argument("--soak", type=float, default=0, help="minutes of full-pipeline soak test")
     b.add_argument("--quick", action="store_true", help="short clips only")
     b.set_defaults(func=cmd_benchmark)
