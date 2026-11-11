@@ -66,7 +66,25 @@ Opus-MT: first text 0.8-1.1 s. With TranslateGemma 4B on the GPU, Whisper slows 
 
 Old test sessions (619 subtitles): pauses inside sentences ~0.15 s, after sentences median 0.73 s, so the 1 s gap is safe. Sentences median 13-16 words EN, 5-7 TR, ~90% under 30 words.
 
-## 6. Open for the M4 Pro
+## 6. Gemini Live Translate (2026-11-10, Air, real time)
+
+`benchmarks/run-20261110-223551-*` (6 clips) plus 3 clips from an interrupted run. No system instruction yet.
+
+| Talk | WER (Gemini's input transcript) | Notes |
+|---|---|---|
+| Shafak (EN) | 6.9% | chrF 63.1 vs human Turkish (Opus-MT, old run: 57.4) |
+| Ozkan (EN) | 8.0% | |
+| LLM course (TR) | 11.7% | |
+| Turer (TR) | 13.3% | 8.5% without "eee" fillers; most of the rest is the clip edge |
+| Tonguc (TR) | 15.0% | inflated by "Camii"/"cami", digits, clip edge; real errors: dropped suffixes, two missed clauses |
+
+- Subtitle text 0.2-0.3 s after Gemini's input transcript; last text never later than the audio end. Local final text on the Pro: 1.2-3.0 s.
+- TR->EN: fluent and faithful ("araç" -> "tool", "Rimini"); copies fillers ("Uh, uh").
+- EN->TR: terms right ("C", "Python 3"), English word order on long sentences ("çağrımızı açmak için makaleler Kasım sonu gibi bu yıl"); short sentences come out natural. AI Studio does the same. No effect on the order: audio chunk size (20 ms to 2 s), sending the audio ahead (Gemini still paces itself in real time), asking for Turkish word order in the instruction.
+- One dropped connection (1006) resumed without losing the clip. Session resumption and context compression are accepted.
+- System instruction: accepted, not billed (usage stays 50 audio tokens/s), fixes name spelling (PyCon 3/3 vs 0/3); follows a glossary of real Turkish terms ("call for proposals" -> "konuşma başvuruları" 2/2, word by word without it) but ignored a made-up word. Text-only output is not possible (native audio model).
+
+## 7. Open for the M4 Pro
 
 1. Accents: English talks by Turkey-based developers (`captioned.py` UNCAPTIONED clips); judge side by side.
 2. Better speech model (turbo 30 s window, large-v3) at acceptable delay?
@@ -74,3 +92,4 @@ Old test sessions (619 subtitles): pauses inside sentences ~0.15 s, after senten
 4. 60-minute soak on the chosen setup.
 5. Speech model per language, only if one model is clearly better for one language.
 6. Hybrid translation: Opus-MT preview, better model for the final sentence; either prompt for minimal changes or animate only changed words.
+7. Gemini: a 30-minute session on the Pro (crosses the 10- and 15-minute limits). Use a fixed language per talk: Detect mode doubled one subtitle in a test.

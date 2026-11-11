@@ -4,10 +4,10 @@
 
 The name comes from Monty Python's "Dirty Hungarian Phrasebook" sketch (1970), where a tourist's deliberately mistranslated phrasebook makes him say that line instead of what he meant. eels tries to be the opposite of that phrasebook.
 
-Live subtitles for Python Pizza Istanbul (14 November 2026): English talks get Turkish subtitles, Turkish talks get English ones. Shown by OBS as a transparent 1920 x 180 web page. Runs offline on one Apple Silicon Mac.
+Live subtitles for Python Pizza Istanbul (14 November 2026): English talks get Turkish subtitles, Turkish talks get English ones. Shown by OBS as a transparent 1920 x 180 web page. Runs on one Apple Silicon Mac, two engines:
 
-- Speech recognition: Whisper large-v3-turbo (MLX, GPU).
-- Translation: Opus-MT (CPU) by default; TranslateGemma or Tencent HY-MT (GPU) selectable per direction.
+- **Local** (offline): Whisper large-v3-turbo (MLX, GPU) + Opus-MT (CPU); TranslateGemma or Tencent HY-MT (GPU) selectable per direction.
+- **Gemini Live Translate** (cloud): speech in, translation out. The local models stay loaded and take over if it fails.
 
 ## Setup (once, with internet)
 
@@ -15,16 +15,30 @@ Needs macOS on Apple Silicon, [uv](https://docs.astral.sh/uv/) and `ffmpeg` (`br
 
 ```sh
 uv sync
-uv run eels download-models   # ~3 GB; --all adds the benchmark candidates (~19 GB)
+uv run eels download-models   # ~3 GB; --all adds the models worth comparing (~19 GB)
 ```
 
 ## Run
 
 ```sh
-uv run eels                   # --no-autostart to wait for the Start button
+uv run eels                   # waits for Start in the control panel; --autostart starts right away
 ```
 
 It prints the control panel URL (`http://localhost:8000/control`) and the OBS URL (`http://<mac-ip>:8000/`). On first run, allow microphone access for the terminal and incoming connections for Python. A denied microphone shows as a red message in the control panel.
+
+## Gemini engine
+
+1. Use a Gemini API key from a project with billing enabled (on the free tier Google may use the talk audio to improve its products).
+2. In the control panel: Setup, **Gemini**, Key. It is saved in this Mac's Keychain. (`GEMINI_API_KEY` in the environment also works and wins.)
+3. Control panel, Schedule and models, Engine: **Gemini Live Translate**.
+
+- Needs internet (wired). About $0.04 per minute of speech; the panel shows a running estimate.
+- Failover: if Gemini is disconnected for 5 s, or 12 s of speech get no translation, the local models take over (red banner). Gemini takes over again after 20 s of working normally.
+- **Keep local models loaded** (Engine card, shown with Gemini; on by default): about 3 GB for an instant fallback. Off: they are unloaded while Gemini runs and load in about 3 s when it fails.
+- In a talk with a fixed language, speech already in the subtitle language (an English quote in a Turkish talk) is shown as spoken. Detect mode leaves it out.
+- Gemini gets the day's program as its instruction (names to keep, talks, no filler sounds, they for unknown gender, Turkish conference terms such as sprint and keynote); it is not billed and fixes name spelling. Glossary: `glossary_tr` in `src/eels/data/program_terms.json`.
+- Kept: schedule, name correction, gender-neutral, live preview, transcripts and SRT.
+- See what Gemini returns: `uv run python -m eels.bench.gemini_probe talk.mp3 --target tr`.
 
 ## OBS
 
@@ -35,13 +49,14 @@ It prints the control panel URL (`http://localhost:8000/control`) and the OBS UR
 
 ## Control panel
 
-- Start / stop.
-- Audio input: device (updates on plug/unplug), channel, level meter, speech indicator, **Lift quiet input** (up to +26 dB).
-- Spoken language: English, Turkish or Detect. **Follow schedule** sets it per session; a manual change holds until the next session. **Gender-neutral**: "they" in English unless the Turkish names a gender.
-- On screen: show/hide, clear, test text, font size, lines, clear after silence, shadow, offset, **Live preview text** (dimmed sentence-in-progress; off = final sentences only, a few seconds later).
-- Keeping up: delays, model timings, worker status and errors. More than 6 s behind skips to live audio.
-- Captions for recordings: SRT download for a time range.
-- Models: speech model and translation model per direction, switched while running without pausing subtitles.
+One screen, no scrolling:
+
+- Top: run state, current and next talk, Start / Stop.
+- The projector's view, with everything that changes the subtitles under it: show/hide, clear, test text, live preview, size, lines, clear after silence, position, shadow.
+- Left: keeping up (status, delays, Gemini cost or local timings) and recent events.
+- Middle: spoken language (English, Turkish, Detect; follow schedule; gender-neutral English) and engine (**Local** or **Gemini**; with Gemini the local models are its backup: changeable while kept loaded, locked while unloaded).
+- Right: audio input (device, channel, level, speech, lift quiet input).
+- Setup bar, each opens a panel: Gemini (key, your instructions; Apply asks to confirm and reconnects Gemini), local models, captions for recordings (SRT), schedule, test with a file.
 
 Settings persist in `var/settings.json`.
 
@@ -83,9 +98,10 @@ uv run eels fetch-bench-audio                 # public talk excerpts
 uv run eels benchmark --quick --asr ... --mt ... --pipeline ASR+MT [--soak 60]
 uv run python -m eels.bench.captioned fetch   # talks by Turkish speakers, some with human captions
 uv run python -m eels.bench.captioned run --asr ... --mt ...
+uv run python -m eels.bench.captioned run --gemini [--asr whisper-turbo-15s --mt opus-mt]   # real time, ~$1.30
 ```
 
-Reports are copied to `docs/findings/benchmarks/`. Candidate names: `src/eels/bench/candidates.py`.
+Reports are copied to `docs/findings/benchmarks/`. Models are named by their key in `src/eels/models.py` (the catalog: name, variant, notes, what to download).
 
 ## Pre-event checklist
 
@@ -96,19 +112,22 @@ Reports are copied to `docs/findings/benchmarks/`. Candidate names: `src/eels/be
 3. Quality, judged per direction:
    ```sh
    uv run python -m eels.bench.captioned run \
-     --asr turbo-750 turbo-full large-v3-750 large-v3-full \
-     --mt opus-mt opus-mt-gpu opus-mt-beam4 hymt1.8b hymt7b tg12b
+     --asr whisper-turbo-15s whisper-turbo-30s whisper-large-v3-15s whisper-large-v3-30s \
+     --mt opus-mt opus-mt-gpu opus-mt-beam4 hymt-1.8b hymt-7b translategemma-12b
    ```
 4. Speed (preview within ~1-2 s, final within ~1-2 s of a sentence end, no skipped audio):
    ```sh
-   uv run eels benchmark --quick --asr turbo-750 turbo-full large-v3-750 \
-     --mt opus-mt opus-mt-gpu hymt1.8b hymt7b tg12b \
-     --pipeline turbo-750+opus-mt turbo-full+opus-mt turbo-750+hymt7b large-v3-750+opus-mt
+   uv run eels benchmark --quick --asr whisper-turbo-15s whisper-turbo-30s whisper-large-v3-15s \
+     --mt opus-mt opus-mt-gpu hymt-1.8b hymt-7b translategemma-12b \
+     --pipeline whisper-turbo-15s+opus-mt whisper-turbo-30s+opus-mt whisper-turbo-15s+hymt-7b
    ```
-   Also try `asr_step_s: 0.3` and `asr_audio_ctx: "full"` in `var/settings.json`.
+   Also try `asr_step_s: 0.3` in `var/settings.json`.
 5. Set the choice in the control panel, then a 60-minute soak: `uv run eels benchmark --pipeline <asr>+<mt> --soak 60`.
-6. Wi-Fi off: the app must start and `play` a file.
-7. Commit `docs/findings/`.
+6. Gemini: store the key (see "Gemini engine"), run the probe on one clip, then
+   `uv run python -m eels.bench.captioned run --gemini --asr whisper-turbo-15s --mt opus-mt` and compare the side by side.
+   With engine Gemini, `play` a 30-minute file (crosses Gemini's 10- and 15-minute session limits); subtitles must not stop.
+7. Network off: the app must start and `play` a file; with engine Gemini, the local models take over.
+8. Commit `docs/findings/`.
 
 ### On the day
 
@@ -117,10 +136,12 @@ Reports are copied to `docs/findings/benchmarks/`. Candidate names: `src/eels/be
 - [ ] OBS source set, test text visible in all three scenes.
 - [ ] Control panel: right device and channel, meter moves, speech dot lights up, no red messages.
 - [ ] Follow schedule on; check the first talk's language.
+- [ ] Press **Start** in the control panel (eels waits for it).
+- [ ] With Gemini: key in the Keychain, Engine shows "On screen", internet works.
 - [ ] Afterwards: export SRTs, keep `var/transcripts/`.
 
 ## Development
 
 `uv run pytest` (no models needed). Code in `src/eels/`; agent notes in `CLAUDE.md`.
 
-Licenses: Open Sans (OFL 1.1), Silero VAD (MIT), Whisper (MIT), Opus-MT (CC-BY 4.0: credit "Translations by Opus-MT, University of Helsinki" when publishing captions), TranslateGemma (Gemma Terms), HY-MT (Tencent HY Community License, excludes EU/UK/South Korea).
+Licenses: Open Sans (OFL 1.1), Silero VAD (MIT), Whisper (MIT), Opus-MT (CC-BY 4.0: credit "Translations by Opus-MT, University of Helsinki" when publishing captions), TranslateGemma (Gemma Terms), HY-MT (Tencent HY Community License, excludes EU/UK/South Korea), Gemini (Gemini API Terms of Service).
