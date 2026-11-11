@@ -193,3 +193,12 @@ def test_store_key_rejects_text_that_is_not_a_key():
     for bad in ("", "short", "has spaces in it but is long enough", "x" * 400):
         with pytest.raises(ValueError):
             store_key(bad)
+
+
+def test_vertex_model_gets_its_full_address():
+    from eels.cloud import model_path
+
+    m = "gemini-3.5-live-translate-preview"
+    assert model_path(m, "vertex", "123", "global") == f"projects/123/locations/global/publishers/google/models/{m}"
+    assert model_path(m, "ai_studio", "123") == m  # AI Studio takes the plain name
+    assert model_path(m, "vertex", "") == m  # no project known: leave it to the SDK

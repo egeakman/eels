@@ -101,11 +101,12 @@ def test_local_models_unload_while_gemini_runs_and_return_on_failover(tmp_path, 
         assert not p.local_parked
 
         saved = []
-        monkeypatch.setattr(pl, "store_key", saved.append)
-        monkeypatch.setattr(pl, "key_source", lambda: "keychain")
+        monkeypatch.setattr(pl, "store_key", lambda key, backend: saved.append((key, backend)))
+        monkeypatch.setattr(pl, "key_source", lambda backend: "keychain")
         before = p.cloud
         assert p.set_gemini_key("new-key-0123456789abcdef") == "Saved in the Keychain."
-        assert saved == ["new-key-0123456789abcdef"] and p.cloud is not before  # reconnected with it
+        assert saved == [("new-key-0123456789abcdef", "vertex")] and p.cloud is not before  # reconnected with it
+        assert p.cloud.backend == "vertex"  # Google Cloud is the default account
         p.apply_settings({"engine": "local"})
     finally:
         p.capture.close()

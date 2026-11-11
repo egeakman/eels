@@ -84,7 +84,7 @@ def cmd_run(args) -> int:
     if s.engine == "gemini":
         from .cloud import api_key
 
-        if not api_key():
+        if not api_key(s.gemini_backend):
             print(
                 "Engine is Gemini but no key was found: running on the local models. "
                 "Set the key in the control panel (Setup, Gemini)."

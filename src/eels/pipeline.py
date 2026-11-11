@@ -28,7 +28,18 @@ from . import hints, models
 from . import schedule as sched
 from . import status as st
 from .audio import AudioCapture, DeviceWatcher, FilePlayer, list_input_devices, load_audio_file, mic_permission
-from .cloud import Failover, GeminiLive, Sentence, Sentencer, api_key, echo_for, key_source, store_key, targets_for
+from .cloud import (
+    BACKEND_NAMES,
+    Failover,
+    GeminiLive,
+    Sentence,
+    Sentencer,
+    api_key,
+    echo_for,
+    key_source,
+    store_key,
+    targets_for,
+)
 from .config import Settings, SettingsStore, translation_model_for
 from .engine import Interim, StreamEngine, other
 from .gender import neutralize
@@ -262,7 +273,7 @@ class Pipeline:
         s = self.store.value
         for model in self._mt_models_in_use():
             self._mt_add(model)
-        if s.engine == "gemini" and not s.gemini_standby and api_key():
+        if s.engine == "gemini" and not s.gemini_standby and api_key(s.gemini_backend):
             for w in self._local_workers():  # not needed until Gemini fails
                 w.parked, w.status.state = True, "unloaded"
         else:
@@ -359,7 +370,8 @@ class Pipeline:
             self.capture.configure(s.device_name, s.channel)
         if s.spoken_language != old.spoken_language:
             self.engine.language_changed(s.spoken_language)
-        if (s.engine, s.gemini_model) != (old.engine, old.gemini_model):
+        gem = ("engine", "gemini_model", "gemini_backend", "gemini_vertex_project", "gemini_vertex_location")
+        if any(getattr(s, k) != getattr(old, k) for k in gem):
             self._cloud_disable()
             if s.engine == "gemini":
                 self._cloud_enable()
@@ -792,14 +804,19 @@ class Pipeline:
 
     def _cloud_enable(self) -> None:
         s = self.store.value
-        if not api_key():
-            self.event("error", "no Gemini key (Keychain item eels-gemini or GEMINI_API_KEY); using the local models")
+        if not api_key(s.gemini_backend):
+            self.event("error", f"no Gemini key for {BACKEND_NAMES[s.gemini_backend]}; using the local models")
             return
+        if s.gemini_backend == "vertex" and not s.gemini_vertex_project:
+            self.event("warn", "set your Google Cloud project in Setup, Gemini; Vertex AI rejects the model without it")
         self.cloud = GeminiLive(
             self._cloud_input,
             self._cloud_output,
             self.event,
             model=s.gemini_model,
+            backend=s.gemini_backend,
+            vertex_project=s.gemini_vertex_project,
+            vertex_location=s.gemini_vertex_location,
             instruction=self._gemini_instruction(),
         )
         self.failover = Failover()
@@ -832,10 +849,11 @@ class Pipeline:
             )
 
     def set_gemini_key(self, key: str) -> str:
-        """Save the Gemini key from the control panel and reconnect with it."""
-        store_key(key)
-        self.event("info", "Gemini key saved in the Keychain")
-        if key_source() == "environment":
+        """Save the Gemini key for the current account from the control panel and reconnect with it."""
+        backend = self.store.value.gemini_backend
+        store_key(key, backend)
+        self.event("info", f"Gemini key for {BACKEND_NAMES[backend]} saved in the Keychain")
+        if key_source(backend) == "environment":
             return "Saved, but GEMINI_API_KEY in the environment is used instead while it is set."
         if self.store.value.engine == "gemini":
             self._cloud_disable()
@@ -1129,7 +1147,10 @@ class Pipeline:
                 speech=self._in_speech(),
             ),
             engine=st.EngineState(
-                chosen=s.engine, on_screen=self.active, keeping_up=self.keeping_up(), gemini_key=key_source()
+                chosen=s.engine,
+                on_screen=self.active,
+                keeping_up=self.keeping_up(),
+                gemini_key=key_source(s.gemini_backend),
             ),
             delays=st.Delays(
                 first_p50=r(self.m_delay_interim.p(0.5)),

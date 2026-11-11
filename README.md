@@ -28,8 +28,8 @@ It prints the control panel URL (`http://localhost:8000/control`) and the OBS UR
 
 ## Gemini engine
 
-1. Use a Gemini API key from a project with billing enabled (on the free tier Google may use the talk audio to improve its products).
-2. In the control panel: Setup, **Gemini**, Key. It is saved in this Mac's Keychain. (`GEMINI_API_KEY` in the environment also works and wins.)
+1. Get a key with billing enabled (on a free tier Google may use the talk audio to improve its products). Two accounts work: **Google Cloud (Vertex AI)**, the default, where Google Cloud credits apply, or **AI Studio**.
+2. In the control panel: Setup, **Gemini**: pick the account, paste its key (saved in this Mac's Keychain, one key per account). For Google Cloud also enter your project ID or number; the region stays `global`. It is saved in this Mac's Keychain. (`GEMINI_API_KEY` in the environment also works and wins.)
 3. Control panel, Schedule and models, Engine: **Gemini Live Translate**.
 
 - Needs internet (wired). About $0.04 per minute of speech; the panel shows a running estimate.

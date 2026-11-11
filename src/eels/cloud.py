@@ -16,6 +16,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Literal
 
 import numpy as np
 
@@ -33,48 +34,62 @@ OUTPUT_BYTES_PER_S = 24000 * 2  # translated speech comes back as 24 kHz 16-bit 
 MAX_QUEUED_FRAMES = 10  # while (re)connecting keep at most 1 s; older audio is stale for live subtitles
 
 
-KEYCHAIN_SERVICE = "eels-gemini"
-_keychain: tuple[float, str | None] = (0.0, None)  # (checked at, key)
-
+Backend = Literal["vertex", "ai_studio"]
+# Two ways to reach the same model, each with its own key: Google Cloud (Vertex AI "express mode",
+# where Google Cloud credits apply) and AI Studio (Gemini API, its own prepaid balance).
+KEYCHAIN_SERVICES: dict[str, str] = {"vertex": "eels-gemini-vertex", "ai_studio": "eels-gemini"}
+BACKEND_NAMES: dict[str, str] = {"vertex": "Google Cloud (Vertex AI)", "ai_studio": "AI Studio"}
+_keychain: dict[str, tuple[float, str | None]] = {}  # backend -> (checked at, key)
 
 KEY_PATTERN = re.compile(r"[A-Za-z0-9._\-]{20,300}")
 
 
-def key_source() -> str | None:
+def model_path(model: str, backend: Backend, project: str = "", location: str = "global") -> str:
+    """The model name to connect with. With an API key on Vertex AI the SDK sends the bare
+    publishers/google/models/<model>, which Vertex rejects ("Invalid resource field value");
+    the full address with project and region is passed through as it is."""
+    if backend != "vertex" or not project or model.startswith("projects/"):
+        return model
+    return f"projects/{project}/locations/{location}/publishers/google/models/{model}"
+
+
+def _env_key() -> str | None:
+    return os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+
+
+def key_source(backend: Backend = "vertex") -> str | None:
     """Where the key comes from: "environment", "keychain" or None."""
-    if os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"):
+    if _env_key():
         return "environment"
-    return "keychain" if api_key() else None
+    return "keychain" if api_key(backend) else None
 
 
-def store_key(key: str) -> None:
-    """Save the key in the macOS Keychain (item eels-gemini). Sent to `security` on stdin, so it
-    never appears in a process list or a log."""
-    global _keychain
+def store_key(key: str, backend: Backend = "vertex") -> None:
+    """Save the key in the macOS Keychain (one item per backend). Sent to `security` on stdin,
+    so it never appears in a process list or a log."""
     key = key.strip()
     if not KEY_PATTERN.fullmatch(key):
         raise ValueError("That does not look like a Gemini API key.")
     account = os.environ.get("USER") or "eels"
-    command = f"add-generic-password -U -a {account} -s {KEYCHAIN_SERVICE} -l eels-gemini-key -w {key}\n"
+    service = KEYCHAIN_SERVICES[backend]
+    command = f"add-generic-password -U -a {account} -s {service} -l {service}-key -w {key}\n"
     out = subprocess.run(["security", "-i"], input=command, capture_output=True, text=True, timeout=10, check=False)
     if out.returncode != 0:
         raise RuntimeError("Could not save the key in the Keychain.")
-    _keychain = (0.0, None)  # read it again
+    _keychain.pop(backend, None)  # read it again
 
 
-def api_key() -> str | None:
-    """GEMINI_API_KEY from the environment, else the macOS Keychain item "eels-gemini"
-    (`security add-generic-password -a "$USER" -s eels-gemini -w` asks for the key)."""
-    global _keychain
-    key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+def api_key(backend: Backend = "vertex") -> str | None:
+    """GEMINI_API_KEY from the environment, else this backend's macOS Keychain item."""
+    key = _env_key()
     if key:
         return key
-    checked, cached = _keychain
+    checked, cached = _keychain.get(backend, (0.0, None))
     if cached or time.monotonic() - checked < 30:  # the status poll calls this twice a second
         return cached
     try:
         out = subprocess.run(
-            ["security", "find-generic-password", "-s", KEYCHAIN_SERVICE, "-w"],
+            ["security", "find-generic-password", "-s", KEYCHAIN_SERVICES[backend], "-w"],
             capture_output=True,
             text=True,
             timeout=5,
@@ -83,7 +98,7 @@ def api_key() -> str | None:
         cached = (out.stdout.strip() or None) if out.returncode == 0 else None
     except (OSError, subprocess.TimeoutExpired):
         cached = None
-    _keychain = (time.monotonic(), cached)
+    _keychain[backend] = (time.monotonic(), cached)
     return cached
 
 
@@ -306,6 +321,9 @@ class GeminiLive:
         on_event: Callable[[str, str], None],
         model: str = GEMINI_MODEL,
         key: str | None = None,
+        backend: Backend = "vertex",
+        vertex_project: str = "",
+        vertex_location: str = "global",
         instruction: str | None = None,  # system instruction (hints.gemini_instruction); used from the next connect
         connect: Callable | None = None,  # tests pass a fake; default is the google-genai client
     ):
@@ -313,7 +331,9 @@ class GeminiLive:
         self.on_output = on_output
         self.on_event = on_event
         self.model = model
-        self.key = key or api_key()
+        self.backend = backend
+        self.key = key or api_key(backend)
+        self.model_path = model_path(model, backend, vertex_project, vertex_location)
         self.instruction = instruction
         self._connect = connect
         self.sessions: dict[str, SessionStatus] = {}
@@ -422,7 +442,8 @@ class GeminiLive:
             return self._connect(model=self.model, config=config)
         from google import genai
 
-        return genai.Client(api_key=self.key).aio.live.connect(model=self.model, config=config)
+        client = genai.Client(vertexai=self.backend == "vertex", api_key=self.key)
+        return client.aio.live.connect(model=self.model_path, config=config)
 
     async def _run(self, target: str) -> None:
         st = self.sessions[target]

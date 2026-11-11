@@ -77,8 +77,15 @@ async def probe(args) -> None:
         if args.verbose:
             print(f"{time.monotonic() - t0:6.2f}s", *parts, flush=True)
 
-    client = genai.Client(api_key=api_key())
-    async with client.aio.live.connect(model=args.model, config=config) as session:
+    from ..cloud import model_path
+    from ..config import SettingsStore
+
+    s = SettingsStore().value
+    backend = "ai_studio" if args.ai_studio else "vertex"
+    client = genai.Client(vertexai=backend == "vertex", api_key=api_key(backend))
+    model = model_path(args.model, backend, s.gemini_vertex_project, s.gemini_vertex_location)
+    log(f"account: {backend}, model: {model}")
+    async with client.aio.live.connect(model=model, config=config) as session:
         log("connected")
 
         async def send():
@@ -126,13 +133,16 @@ def main() -> int:
     ap.add_argument("--seconds", type=float, default=60.0, help="file mode: how much of the file")
     ap.add_argument("--model", default=GEMINI_MODEL)
     ap.add_argument("--echo", action="store_true", help="echo_target_language on (eels with a fixed language)")
+    ap.add_argument(
+        "--ai-studio", action="store_true", help="use the AI Studio key instead of Google Cloud (Vertex AI)"
+    )
     ap.add_argument("--extra", help="text appended to the program instruction (to try glossary lines)")
     ap.add_argument("--bare", action="store_true", help="without the program as system instruction")
     ap.add_argument("--verbose", action="store_true", help="print every message with timestamps")
     args = ap.parse_args()
     if not args.mic and not args.file:
         ap.error("give a FILE or --mic")
-    if not api_key():
+    if not api_key("ai_studio" if args.ai_studio else "vertex"):
         print("No Gemini key: store it in the Keychain (README, Gemini engine) or set GEMINI_API_KEY.")
         return 1
     asyncio.run(probe(args))

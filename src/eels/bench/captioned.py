@@ -173,6 +173,7 @@ def gemini_clip(audio, lang: str, speed: float = 1.0, settle_s: float = 6.0) -> 
     from .. import hints
     from .. import schedule as sched
     from ..cloud import FRAME_SAMPLES, GeminiLive, Sentencer
+    from ..config import SettingsStore
 
     target = "tr" if lang == "en" else "en"
     sn = Sentencer()
@@ -194,6 +195,9 @@ def gemini_clip(audio, lang: str, speed: float = 1.0, settle_s: float = 6.0) -> 
         on_output,
         lambda level, msg: events.append((level, msg)),
         instruction=hints.gemini_instruction(sched.load()),  # as the app does
+        backend=SettingsStore().value.gemini_backend,
+        vertex_project=SettingsStore().value.gemini_vertex_project,
+        vertex_location=SettingsStore().value.gemini_vertex_location,
     )
     try:
         g.set_targets([target], echo=True)  # as the app does for a talk with a fixed language
@@ -289,8 +293,9 @@ def run(
 
     if gemini:
         from ..cloud import api_key
+        from ..config import SettingsStore
 
-        if not api_key():
+        if not api_key(SettingsStore().value.gemini_backend):
             print("No Gemini key: store it in the Keychain (README, Gemini engine) or set GEMINI_API_KEY.")
             return 1
         for c in clips:

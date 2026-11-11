@@ -289,8 +289,15 @@
 
 <dialog id="dlg-gi">
   <div class="head"><h2>Gemini</h2><button data-close>Close</button></div>
+  <h3>Account</h3>
+  <div class="row"><select id="gemini-backend" style="flex:0 0 260px">
+    <option value="vertex">Google Cloud (Vertex AI)</option>
+    <option value="ai_studio">AI Studio</option>
+  </select><span class="muted">Google Cloud credits apply to Vertex AI. Changing it reconnects Gemini.</span></div>
+  <div class="row" id="vertex-row"><span class="muted" style="width:150px">Project and region</span>
+    <input id="vertex-project" size="16" spellcheck="false" placeholder="project ID or number"><input id="vertex-location" size="10" spellcheck="false"></div>
   <h3>Key</h3>
-  <p class="note">Saved in this Mac's Keychain (item eels-gemini). Use a key from a project with billing enabled. The key is not shown again. <span id="key-info"></span></p>
+  <p class="note">For the account above, saved in this Mac's Keychain. The key is not shown again. <span id="key-info"></span></p>
   <div class="row"><input id="key-input" type="password" autocomplete="off" spellcheck="false" placeholder="Paste a new key" style="flex:1"><button id="key-save" disabled>Save key</button></div>
   <div class="muted" id="key-state"></div>
   <h3>Instructions</h3>
@@ -451,6 +458,10 @@
     put("auto-gain", settings.auto_gain, "checked");
     put("gender-neutral", settings.gender_neutral, "checked");
     put("standby", settings.gemini_standby, "checked");
+    put("gemini-backend", settings.gemini_backend);
+    put("vertex-project", settings.gemini_vertex_project);
+    put("vertex-location", settings.gemini_vertex_location);
+    $("vertex-row").hidden = settings.gemini_backend !== "vertex";
     $("key-info").textContent = engine.gemini_key === "environment" ? "Key from GEMINI_API_KEY."
       : engine.gemini_key === "keychain" ? "A key is saved." : "No key yet.";
     if ($("device") !== active && $("device").value !== (settings.device_name || "")) renderDevices();
@@ -654,6 +665,9 @@
   $("auto-gain").onchange = e => set({ auto_gain: e.target.checked });
   $("gender-neutral").onchange = e => set({ gender_neutral: e.target.checked });
   $("standby").onchange = e => set({ gemini_standby: e.target.checked });
+  $("gemini-backend").onchange = e => set({ gemini_backend: e.target.value });
+  $("vertex-project").onchange = e => set({ gemini_vertex_project: e.target.value.trim() });
+  $("vertex-location").onchange = e => set({ gemini_vertex_location: e.target.value.trim() || "global" });
   $("key-input").oninput = e => { $("key-save").disabled = !e.target.value.trim(); $("key-state").textContent = ""; };
   $("key-save").onclick = () => { $("key-state").textContent = "Saving…"; $("key-state").className = "muted"; send({ cmd: "gemini_key", key: $("key-input").value }); };
 

@@ -68,6 +68,11 @@ class Settings(BaseModel):
     # GEMINI_API_KEY and internet); the local models stay loaded and take over if Gemini fails.
     engine: Engine = "local"
     gemini_model: str = "gemini-3.5-live-translate-preview"
+    # Which account reaches Gemini: Google Cloud (Vertex AI express mode, Cloud credits apply) or AI Studio.
+    gemini_backend: Literal["vertex", "ai_studio"] = "vertex"
+    # Vertex AI with an API key needs the full model address: projects/<project>/locations/<region>/...
+    gemini_vertex_project: str = ""  # your Google Cloud project ID or number (Setup, Gemini)
+    gemini_vertex_location: str = "global"  # where Google lists Live Translate
     # Keep the local models loaded while Gemini is on screen (~3 GB): instant fallback. Off: they
     # are unloaded and load again (~3 s) only if Gemini fails.
     gemini_standby: bool = True
