@@ -44,6 +44,32 @@ def protected_names(sessions) -> list[str]:
     return list(dict.fromkeys(names + speakers(sessions)))
 
 
+def glossary_tr() -> dict[str, str]:
+    return {k: v for k, v in _terms().get("glossary_tr", {}).items() if not k.startswith("_")}
+
+
+def gemini_instruction(sessions, extra: str = "") -> str:
+    """System instruction for Gemini Live Translate: the whole day's program. Measured 2026-11-10:
+    accepted, not billed (usage stays at the audio tokens), and it makes Gemini spell program
+    names right ("PyCon" instead of "Pycon" or "Pi günümüzü"). Real Turkish terms in a glossary are
+    followed ("call for proposals" -> "konuşma başvuruları"); a made-up word was not."""
+    glossary = ", ".join(f"{en} = {tr}" for en, tr in glossary_tr().items())
+    talks = [
+        f"{s.title} ({s.speaker})" if s.speaker and len(s.speaker) < 60 else s.title
+        for s in sessions
+        if s.title and s.lang
+    ]
+    return (
+        "You are subtitling talks at Python Pizza Istanbul, a Python community conference, for the "
+        "audience in the room and on the live stream. "
+        f"Keep these names exactly as written and never translate them: {', '.join(protected_names(sessions))}. "
+        f"Today's talks: {'; '.join(talks)}. "
+        "Leave out filler sounds such as eee, ııı, uh and um. "
+        "When the Turkish does not say whether a person is a man or a woman, use they in English. "
+        f"Conference terms in Turkish subtitles: {glossary}."
+    ) + (f" Additional instructions from the organisers: {extra.strip()}" if extra.strip() else "")
+
+
 HINT_MAX_TOKENS = 160  # of Whisper's ~223 prompt tokens; recent speech gets most of the rest
 
 

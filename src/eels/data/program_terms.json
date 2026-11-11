@@ -1,5 +1,16 @@
 {
   "_comment": "Names likely to come up in each talk (libraries, tools, products), keyed by a word from the talk title. Used as a Whisper hint while the talk or the next one is on, and protected from translation everywhere. Proper names only: ordinary technical words (worker, token, cache) are left for the translator.",
+  "glossary_tr": {
+    "_comment": "Conference words with the Turkish to use in subtitles (sent to Gemini in its instruction). Same word = keep it as is.",
+    "sprint": "sprint",
+    "lightning talk": "lightning talk",
+    "keynote": "ana konuşma",
+    "workshop": "atölye",
+    "Q&A": "soru-cevap",
+    "call for proposals": "konuşma başvuruları",
+    "code of conduct": "davranış kuralları",
+    "booth": "stant"
+  },
   "always": ["Python", "PyIstanbul", "Python Pizza", "PyCon", "GitHub", "PyPI", "NumPy", "pandas", "Docker", "Jupyter", "VS Code", "Kahoot"],
   "talks": {
     "Rust": ["Rust", "PyO3", "maturin", "Cython", "CPython", "cargo", "GIL"],
