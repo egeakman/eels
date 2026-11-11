@@ -53,6 +53,11 @@ class MlxLmTranslator:
         self.is_translategemma = "translategemma" in name
         if not self.is_translategemma and "hy-mt" not in name:
             raise ValueError(f"unsupported translation model {model!r} (TranslateGemma or HY-MT expected)")
+        # HY-MT's config lists YaRN keys under its dynamic rope scaling; transformers reads the config
+        # only for the tokenizer and warns about keys it does not use. MLX applies them; not an error.
+        import logging
+
+        logging.getLogger("transformers.modeling_rope_utils").setLevel(logging.ERROR)
         t0 = time.perf_counter()
         self.model, self.tokenizer = load(model)
         self.sampler = make_sampler(temp=0.0)
