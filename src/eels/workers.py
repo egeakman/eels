@@ -21,6 +21,8 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
 
+from .status import Event, WorkerState
+
 log = logging.getLogger(__name__)
 
 
@@ -123,25 +125,13 @@ def _worker_main(factory: str, spec: dict, req_q, resp_q, parent_pid: int = 0) -
 @dataclass
 class WorkerStatus:
     name: str
-    state: str = "stopped"  # stopped | loading | ready | busy | error | restarting
+    state: WorkerState = "stopped"
     info: dict = field(default_factory=dict)
     restarts: int = 0
     last_call_ms: float = 0.0
     rss_mb: float | None = None
     baseline_mb: float | None = None  # footprint right after the model loaded
-    errors: deque = field(default_factory=lambda: deque(maxlen=10))
-
-    def as_dict(self) -> dict:
-        return {
-            "name": self.name,
-            "state": self.state,
-            "info": self.info,
-            "restarts": self.restarts,
-            "last_call_ms": round(self.last_call_ms, 1),
-            "rss_mb": None if self.rss_mb is None else round(self.rss_mb),
-            "baseline_mb": None if self.baseline_mb is None else round(self.baseline_mb),
-            "errors": list(self.errors),
-        }
+    errors: deque[Event] = field(default_factory=lambda: deque(maxlen=10))
 
 
 class WorkerClient:
@@ -167,11 +157,21 @@ class WorkerClient:
         self._ready = False
         self._backoff = 0.0
         self._lock = threading.Lock()
+        self.parked = False  # unloaded on purpose (Gemini on screen): poll() must not respawn it
+        self.model_key: str | None = None  # catalog key of the model this worker runs (models.py)
 
     # Lifecycle ------------------------------------------------------------
     def start(self) -> None:
         with self._lock:
+            self.parked = False
             self._spawn()
+
+    def park(self) -> None:
+        """Unload the model and stay down until start() (frees its memory)."""
+        with self._lock:
+            self.parked = True
+            self._kill()
+            self.status.state = "unloaded"
 
     def _spawn(self) -> None:
         self._req_q = self._ctx.Queue()
@@ -235,7 +235,7 @@ class WorkerClient:
 
     def _record_error(self, msg: str) -> None:
         line = msg.strip().splitlines()[-1] if msg.strip() else msg
-        self.status.errors.append({"t": time.strftime("%H:%M:%S"), "msg": line[:300]})
+        self.status.errors.append(Event("error", line[:300]))
         log.error("%s worker: %s", self.name, msg.strip())
 
     def rss_mb(self) -> float | None:
@@ -251,6 +251,13 @@ class WorkerClient:
     @property
     def ready(self) -> bool:
         return self._ready and self.alive
+
+    @property
+    def loading_s(self) -> float | None:
+        """Seconds since the current load started, while loading."""
+        if self.status.state not in ("loading", "restarting") or self._proc is None:
+            return None
+        return time.monotonic() - getattr(self, "_spawned_at", time.monotonic())
 
     # Calls ----------------------------------------------------------------
     def wait_ready(self, timeout: float | None = None) -> bool:
@@ -293,6 +300,8 @@ class WorkerClient:
         """Non-blocking readiness check. Respawns a worker whose model failed to load, every 15 s."""
         if self.ready:
             return True
+        if self.parked:
+            return False
         now = time.monotonic()
         if self._proc is None:
             if now - self._last_spawn_try > 15.0:

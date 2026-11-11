@@ -37,6 +37,7 @@ LOG_DIR = VAR_DIR / "logs"
 TIMEZONE = "Europe/Istanbul"
 
 SpokenLang = Literal["en", "tr", "auto"]
+Engine = Literal["local", "gemini"]
 Channel = Literal["mono", "left", "right"]
 
 
@@ -63,12 +64,21 @@ class Settings(BaseModel):
     interim: bool = True
 
     # Models
-    asr_model: str = "mlx-community/whisper-large-v3-turbo"
-    asr_audio_ctx: str = "750"  # encoder window: "full" (30 s) or positions ("750" = 15 s, ~2x faster)
-    mt_model: str = "opus-mt"  # Opus-MT tc-big on the CPU; TranslateGemma via its mlx-community repo name
-    # Per-direction override (None = use mt_model): e.g. Opus-MT for TR->EN, a larger model for EN->TR.
-    mt_model_en_tr: str | None = None
-    mt_model_tr_en: str | None = None
+    # "local": Whisper + translation model on this Mac. "gemini": Gemini Live Translate (cloud, needs
+    # GEMINI_API_KEY and internet); the local models stay loaded and take over if Gemini fails.
+    engine: Engine = "local"
+    gemini_model: str = "gemini-3.5-live-translate-preview"
+    # Keep the local models loaded while Gemini is on screen (~3 GB): instant fallback. Off: they
+    # are unloaded and load again (~3 s) only if Gemini fails.
+    gemini_standby: bool = True
+    # Added by the operator in the control panel, after the generated program instruction.
+    gemini_extra_instruction: str = Field("", max_length=4000)
+    # Local models: keys from models.CATALOG.
+    speech_model: str = "whisper-turbo-15s"
+    translation_model: str = "opus-mt"
+    # Per direction (None = translation_model): e.g. Opus-MT for TR->EN, a larger model for EN->TR.
+    translation_model_en_tr: str | None = None
+    translation_model_tr_en: str | None = None
 
     # Streaming policy
     asr_step_s: float = Field(0.5, ge=0.2, le=3.0)
@@ -81,13 +91,44 @@ class Settings(BaseModel):
     max_backlog_s: float = Field(6.0, ge=2.0, le=30.0)
 
 
-def mt_for(settings: Settings, src: str, tgt: str) -> str:
-    """The translation model used for one direction."""
-    if (src, tgt) == ("en", "tr") and settings.mt_model_en_tr:
-        return settings.mt_model_en_tr
-    if (src, tgt) == ("tr", "en") and settings.mt_model_tr_en:
-        return settings.mt_model_tr_en
-    return settings.mt_model
+def translation_model_for(settings: Settings, src: str, tgt: str) -> str:
+    """The translation model key used for one direction."""
+    if (src, tgt) == ("en", "tr") and settings.translation_model_en_tr:
+        return settings.translation_model_en_tr
+    if (src, tgt) == ("tr", "en") and settings.translation_model_tr_en:
+        return settings.translation_model_tr_en
+    return settings.translation_model
+
+
+def migrate_settings(data: dict) -> dict:
+    """Bring a settings file from an older eels up to date: model repo names become catalog keys,
+    and a key that is not in the catalog any more falls back to the default."""
+    from . import models
+
+    data = dict(data)
+    if "asr_model" in data:
+        spec = {"model": data.pop("asr_model"), "audio_ctx": data.pop("asr_audio_ctx", "750")}
+        found = models.find_by_spec("speech", spec)
+        data["speech_model"] = found.key if found else models.DEFAULT_SPEECH
+    for old, new in (
+        ("mt_model", "translation_model"),
+        ("mt_model_en_tr", "translation_model_en_tr"),
+        ("mt_model_tr_en", "translation_model_tr_en"),
+    ):
+        if old in data:
+            value = data.pop(old)
+            found = models.find_by_spec("translation", {"model": value}) if value else None
+            data[new] = found.key if found else (models.DEFAULT_TRANSLATION if new == "translation_model" else None)
+    for key, job, default in (
+        ("speech_model", "speech", models.DEFAULT_SPEECH),
+        ("translation_model", "translation", models.DEFAULT_TRANSLATION),
+        ("translation_model_en_tr", "translation", None),
+        ("translation_model_tr_en", "translation", None),
+    ):
+        value = data.get(key)
+        if value is not None and (value not in models.BY_KEY or models.BY_KEY[value].job != job):
+            data[key] = default
+    return data
 
 
 class SettingsStore:
@@ -101,7 +142,7 @@ class SettingsStore:
     def _load(self) -> Settings:
         if self.path.exists():
             try:
-                data = json.loads(self.path.read_text())
+                data = migrate_settings(json.loads(self.path.read_text()))
                 known = {k: v for k, v in data.items() if k in Settings.model_fields}
                 return Settings.model_validate(known)
             except Exception as exc:  # corrupt file: keep a copy, start from defaults

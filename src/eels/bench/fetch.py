@@ -10,27 +10,27 @@ import shutil
 import subprocess
 
 from ..config import VAR_DIR
+from .clips import Clip
 
 AUDIO_DIR = VAR_DIR / "bench-audio"
 
-# (name, language, YouTube id, section start, section end, description)
-SOURCES = [
-    ("tr_meetup72", "tr", "PgWe6qsfx4I", "08:00", "13:00", "Python Istanbul MeetUp 72 (Turkish, room audio)"),
-    ("tr_meetup66", "tr", "IOKtAMFrkoQ", "12:00", "17:00", "Python Istanbul MeetUp, Python Saati #66 (Turkish)"),
-    (
+SOURCES: list[Clip] = [
+    Clip("tr_meetup72", "tr", "PgWe6qsfx4I", 480, 780, "Python Istanbul MeetUp 72 (Turkish, room audio)"),
+    Clip("tr_meetup66", "tr", "IOKtAMFrkoQ", 720, 1020, "Python Istanbul MeetUp, Python Saati #66 (Turkish)"),
+    Clip(
         "en_pizza_music",
         "en",
         "qJraRfZoXjI",
-        "01:00",
-        "06:00",
+        60,
+        360,
         "Python Pizza Hamburg 2021, GPT and music (non-native English)",
     ),
-    (
+    Clip(
         "en_pycon_shaw",
         "en",
         "Mp5wKOL4L2Q",
-        "05:00",
-        "10:00",
+        300,
+        600,
         "PyCon US 2024, Anthony Shaw, subinterpreters (native English)",
     ),
 ]
@@ -45,21 +45,22 @@ def main(args=None) -> int:
         return 1
     AUDIO_DIR.mkdir(parents=True, exist_ok=True)
     ok = 0
-    for name, lang, vid, start, end, desc in SOURCES:
+    for clip in SOURCES:
+        name = clip.name
         out = AUDIO_DIR / f"{name}.wav"
         if out.exists():
             print(f"have {out.name}")
             ok += 1
             continue
-        print(f"fetching {name}: {desc} [{start}-{end}]", flush=True)
+        print(f"fetching {name}: {clip.description} [{clip.start}-{clip.end} s]", flush=True)
         cmd = [
             "uvx",
             "yt-dlp",
-            f"https://www.youtube.com/watch?v={vid}",
+            f"https://www.youtube.com/watch?v={clip.video}",
             "-f",
             "bestaudio",
             "--download-sections",
-            f"*{start}-{end}",
+            clip.section,
             "-x",
             "--audio-format",
             "wav",

@@ -4,11 +4,61 @@ from __future__ import annotations
 
 import json
 import threading
+from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, time
 from pathlib import Path
+from typing import Literal
 
 from .config import TRANSCRIPT_DIR
 from .schedule import TZ
+
+
+@dataclass
+class TranscriptRecord:
+    """One subtitle as it went on screen. Same fields whichever engine made it."""
+
+    start: datetime  # when the speech started (timezone-aware)
+    end: datetime  # when the subtitle was final
+    src: str  # spoken language: "en" | "tr"
+    tgt: str  # subtitle language
+    source: str  # what was said
+    translation: str  # what was shown
+    engine: Literal["local", "gemini"]
+    speech_model: str  # catalog key (local) or Gemini model id
+    translation_model: str
+    mode: str  # spoken-language setting at the time: "en" | "tr" | "auto"
+    session: str | None  # the talk
+    cut: str  # why the sentence ended: sentence, gap, max_words, max_time, language, end, finished
+    delay_s: float  # from the end of the speech to the final subtitle
+    fallback: bool = False  # the source text was shown because translation failed
+    corrections: list[tuple[str, str]] = field(default_factory=list)  # (heard, corrected) names
+
+    def to_json(self) -> dict:
+        d = asdict(self)
+        d["start"] = self.start.isoformat(timespec="milliseconds")
+        d["end"] = self.end.isoformat(timespec="milliseconds")
+        return d
+
+    @classmethod
+    def from_json(cls, d: dict) -> TranscriptRecord:
+        """Also reads lines written by older versions (asr_model/mt_model, no engine)."""
+        return cls(
+            start=datetime.fromisoformat(d["start"]),
+            end=datetime.fromisoformat(d["end"]),
+            src=d.get("src", ""),
+            tgt=d.get("tgt", ""),
+            source=d.get("source", ""),
+            translation=d.get("translation", ""),
+            engine=d.get("engine", "local"),
+            speech_model=d.get("speech_model", d.get("asr_model", "")),
+            translation_model=d.get("translation_model", d.get("mt_model", "")),
+            mode=d.get("mode", ""),
+            session=d.get("session"),
+            cut=d.get("cut", ""),
+            delay_s=float(d.get("delay_s") or 0.0),
+            fallback=bool(d.get("fallback", False)),
+            corrections=[tuple(c) for c in d.get("corrections", [])],
+        )
 
 
 class TranscriptLog:
@@ -19,27 +69,22 @@ class TranscriptLog:
     def path_for(self, day: date) -> Path:
         return self.dir / f"{day.isoformat()}.jsonl"
 
-    def append(self, record: dict) -> None:
-        """record must contain 'start' and 'end' as timezone-aware datetimes."""
-        start: datetime = record["start"]
-        rec = dict(record)
-        rec["start"] = start.isoformat(timespec="milliseconds")
-        rec["end"] = record["end"].isoformat(timespec="milliseconds")
-        line = json.dumps(rec, ensure_ascii=False)
+    def append(self, record: TranscriptRecord) -> None:
+        line = json.dumps(record.to_json(), ensure_ascii=False)
         with self._lock:
             self.dir.mkdir(parents=True, exist_ok=True)
-            with self.path_for(start.date()).open("a", encoding="utf-8") as f:
+            with self.path_for(record.start.date()).open("a", encoding="utf-8") as f:
                 f.write(line + "\n")
 
-    def read(self, day: date) -> list[dict]:
+    def read(self, day: date) -> list[TranscriptRecord]:
         path = self.path_for(day)
         if not path.exists():
             return []
         out = []
         for line in path.read_text(encoding="utf-8").splitlines():
             try:
-                out.append(json.loads(line))
-            except json.JSONDecodeError:
+                out.append(TranscriptRecord.from_json(json.loads(line)))
+            except (json.JSONDecodeError, KeyError, ValueError):
                 continue  # a line cut short by a crash
         return out
 
@@ -66,7 +111,7 @@ def parse_clock(day: date, hhmm: str) -> datetime:
 
 
 def export_srt(
-    records: list[dict],
+    records: list[TranscriptRecord],
     start: datetime,
     end: datetime,
     text: str = "translation",
@@ -80,16 +125,15 @@ def export_srt(
     """
     rows = []
     for r in records:
-        rs = datetime.fromisoformat(r["start"])
-        re_ = datetime.fromisoformat(r["end"])
+        rs, re_ = r.start, r.end
         if re_ < start or rs > end:
             continue
         if text == "source":
-            body = r.get("source", "")
+            body = r.source
         elif text == "both":
-            body = f"{r.get('translation', '')}\n{r.get('source', '')}"
+            body = f"{r.translation}\n{r.source}"
         else:
-            body = r.get("translation", "")
+            body = r.translation
         if not body.strip():
             continue
         a = (rs - start).total_seconds() + offset_s

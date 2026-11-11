@@ -1,9 +1,11 @@
 """Benchmark speech recognition and translation candidates on this Mac.
 
   uv run eels benchmark                 # everything with defaults
-  uv run eels benchmark --mt            # all MT candidates only
-  uv run eels benchmark --asr turbo-750 turbo-full
-  uv run eels benchmark --pipeline turbo-750+tg4b --soak 30
+  uv run eels benchmark --mt            # all translation models only
+  uv run eels benchmark --asr whisper-turbo-15s whisper-turbo-30s
+  uv run eels benchmark --pipeline whisper-turbo-15s+opus-mt --soak 30
+
+Models are named by their key in models.py.
 
 Results go to var/bench/<timestamp>/ (report.md, results.json, mt_review.md).
 """
@@ -23,10 +25,10 @@ from pathlib import Path
 
 import numpy as np
 
+from .. import models
 from ..config import VAR_DIR, Settings, SettingsStore
 from ..streaming import SAMPLE_RATE, Word
 from ..workers import WorkerClient
-from . import candidates
 from .fetch import AUDIO_DIR
 
 BENCH_DIR = VAR_DIR / "bench"
@@ -226,7 +228,7 @@ def reference_text(name: str, lang: str, audio: np.ndarray, quick: bool) -> str:
         "import sys, numpy as np, mlx.core as mx, mlx_whisper\n"
         "mx.set_cache_limit(512 * 2**20)\n"
         "a = np.load(sys.argv[1])\n"
-        f"r = mlx_whisper.transcribe(a, path_or_hf_repo='{candidates.REFERENCE_ASR}', language='{lang}', "
+        f"r = mlx_whisper.transcribe(a, path_or_hf_repo='{models.get(models.REFERENCE_SPEECH).spec['model']}', language='{lang}', "
         "condition_on_previous_text=False, verbose=None)\n"
         "sys.stdout.write(r['text'].strip())\n"
     )
@@ -341,8 +343,9 @@ def run_asr(names: list[str], quick: bool, out: dict) -> None:
     refs = {name: reference_text(name, lang, audio, quick) for name, lang, audio in data}
     results = out.setdefault("asr", {})
     for cand in names:
-        spec, note = candidates.ASR[cand]
-        print(f"ASR {cand}: {note}", flush=True)
+        m = models.get(cand)
+        spec, note = m.spec, f"{m.title}. {m.note}"
+        print(f"Speech {cand}: {note}", flush=True)
         worker = start_worker("asr", "eels.asr:create", spec)
         load = worker.status.info.get("load_s")
         per_clip = {}
@@ -379,8 +382,9 @@ def run_mt(names: list[str], out: dict) -> None:
     results = out.setdefault("mt", {})
     outputs: dict[str, list[str]] = {}
     for cand in names:
-        spec, note = candidates.MT[cand]
-        print(f"MT {cand}: {note}", flush=True)
+        m = models.get(cand)
+        spec, note = m.spec, f"{m.title}. {m.note}"
+        print(f"Translation {cand}: {note}", flush=True)
         worker = start_worker("mt", "eels.translate:create", spec)
         hyps, times = [], []
         rejected = 0
@@ -433,18 +437,11 @@ def run_pipeline(pairs: list[str], soak_min: float, out: dict, out_dir: Path) ->
     results = out.setdefault("pipeline", {})
     for pair in pairs:
         asr_name, mt_name = pair.split("+")
-        aspec, _ = candidates.ASR[asr_name]
-        mspec, _ = candidates.MT[mt_name]
-        print(f"Pipeline {pair} (real time, ASR and MT sharing the GPU)", flush=True)
+        models.get(asr_name), models.get(mt_name)  # fail early on a typo
+        print(f"Pipeline {pair} (real time, speech and translation sharing the Mac)", flush=True)
         store = SettingsStore(out_dir / f"settings_{pair}.json")
-        store.update(
-            asr_model=aspec["model"],
-            asr_audio_ctx=aspec.get("audio_ctx", "750"),
-            mt_model=mspec["model"],
-            auto_from_schedule=False,
-        )
+        store.update(speech_model=asr_name, translation_model=mt_name, auto_from_schedule=False)
         p = Pipeline(store, lambda ch, msg: None)
-        p.mt_extra = {k: v for k, v in mspec.items() if k != "model"}
         p.transcript = TranscriptLog(out_dir / f"transcripts_{pair}")
         p.boot()
         while not (p.asr.ready and p.mt_ready):
@@ -617,10 +614,14 @@ def main(args) -> int:
     out: dict = {"started": time.strftime("%Y-%m-%d %H:%M"), "machine": machine_info()}
     print(f"Benchmark on {out['machine']}", flush=True)
     if args.mt is not None or not explicit:
-        run_mt(args.mt or list(candidates.MT), out)
+        run_mt(args.mt or [m.key for m in models.of_job("translation")], out)
     if args.asr is not None or not explicit:
-        run_asr(args.asr or list(candidates.ASR), args.quick, out)
-    pairs = args.pipeline if args.pipeline else (["turbo-750+tg4b"] if (not explicit or args.soak) else [])
+        run_asr(args.asr or [m.key for m in models.of_job("speech")], args.quick, out)
+    pairs = (
+        args.pipeline
+        if args.pipeline
+        else ([f"{models.DEFAULT_SPEECH}+{models.DEFAULT_TRANSLATION}"] if (not explicit or args.soak) else [])
+    )
     if pairs:
         run_pipeline(pairs, args.soak, out, out_dir)
     report = write_report(out, out_dir)
