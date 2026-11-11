@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Subtitles control</title>
+<title>eels control</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   @font-face {
@@ -12,7 +12,7 @@
     font-stretch: 75% 100%;
   }
   :root {
-    --band: #2a1614;
+    --band: #2a1614;      /* the room: dark tomato-brown */
     --crust: #3a221e;
     --crust-2: #4a2e28;
     --flour: #f3e9e2;
@@ -20,231 +20,324 @@
     --basil: #7fb069;
     --cheese: #f2c14e;
     --tomato: #e4572e;
-    --line: rgba(243, 233, 226, 0.12);
+    --line: rgba(243, 233, 226, 0.13);
     --radius: 10px;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; background: var(--band); color: var(--flour); }
   body {
     font-family: "Open Sans", system-ui, sans-serif;
-    font-size: 15px;
-    line-height: 1.45;
-    padding: 18px 20px 40px;
-    max-width: 1500px;
-    margin: 0 auto;
+    font-size: 14px;
+    line-height: 1.4;
+    /* One screen: header, stage, the three columns (they take what is left), the setup bar. */
+    min-height: 100vh;  /* fills the window; grows (the page scrolls) only if the window is too short */
+    display: grid;
+    grid-template-rows: auto auto auto minmax(min-content, 1fr) auto;  /* too short a window: the page scrolls */
+    row-gap: 12px;
+    padding: 12px 20px 14px;
   }
-  h1 { font-size: 20px; font-weight: 700; margin: 0; }
-  h2 { font-size: 15px; font-weight: 700; margin: 0 0 10px; color: var(--flour); }
+  h2 { font-size: 15px; font-weight: 700; margin: 0 0 8px; }
   .num { font-stretch: 75%; font-variant-numeric: tabular-nums; }
   .muted { color: var(--muted); }
-  button, select, input {
+  .note { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+  .ok { color: var(--basil); }
+  .warn { color: var(--cheese); }
+  .bad { color: var(--tomato); }
+
+  button, select, input, textarea {
     font: inherit;
     color: var(--flour);
     background: var(--crust-2);
     border: 1px solid var(--line);
     border-radius: 8px;
-    padding: 7px 12px;
+    padding: 6px 11px;
   }
   button { cursor: pointer; font-weight: 600; }
-  button:hover:not(:disabled) { border-color: rgba(243, 233, 226, 0.4); }
-  button:disabled { opacity: 0.45; cursor: default; }
-  .model { margin: 10px 0; }
-  .model > label { display: block; color: var(--muted); margin-bottom: 4px; }
-  .model .row { margin: 0; flex-wrap: nowrap; }
-  .model select { flex: 1; min-width: 0; text-overflow: ellipsis; }
-  button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--cheese); outline-offset: 2px; }
-  input[type=number] { width: 84px; }
-  input[type=range] { padding: 0; accent-color: var(--cheese); width: 100%; background: none; border: 0; }
+  button:hover:not(:disabled) { border-color: rgba(243, 233, 226, 0.45); }
+  button:disabled, select:disabled { opacity: 0.45; cursor: default; }
+  button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--cheese); outline-offset: 2px;
+  }
+  input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--basil); margin: 0; }
+  input[type=number] { width: 72px; }
+  input[type=range] { padding: 0; accent-color: var(--cheese); background: none; border: 0; }
+  textarea { width: 100%; resize: vertical; }
+  button.danger { background: var(--tomato); color: #2a0d05; border-color: transparent; }
 
-  /* Program monitor: the overlay as the audience sees it, on the band. */
-  header { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
-  header .grow { flex: 1; }
-  #runstate { font-weight: 700; }
-  #runstate.on { color: var(--basil); }
-  #runstate.off { color: var(--muted); }
-  #startstop { min-width: 150px; padding: 12px 18px; font-size: 17px; }
+  /* Header: name and state, the talk on stage, the one big button. */
+  header { display: flex; align-items: center; gap: 22px; }
+  .brand b { font-size: 32px; font-weight: 800; font-stretch: 75%; line-height: 1; }
+  .state { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; white-space: nowrap; }
+  .state::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: #6b4c45; }
+  .state.on { color: var(--basil); }
+  .state.on::before { background: var(--basil); animation: onair 2.4s ease-in-out infinite; }
+  @keyframes onair { 50% { box-shadow: 0 0 0 6px rgba(127, 176, 105, 0.18); } }
+  .talks { flex: 1; min-width: 0; display: grid; gap: 1px; padding-left: 22px; border-left: 1px solid var(--line); }
+  .talk { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .talk .when { font-stretch: 75%; color: var(--muted); display: inline-block; min-width: 118px; }
+  #next-session { color: var(--muted); }
+  .lang { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 5px; border-radius: 4px; border: 1px solid var(--line); margin-right: 6px; }
+  #conn { font-size: 13px; }
+  #startstop { min-width: 150px; padding: 11px 18px; font-size: 17px; }
   #startstop.start { background: var(--basil); color: #17240f; border-color: transparent; }
   #startstop.stop { background: var(--tomato); color: #2a0d05; border-color: transparent; }
-  .monitor {
-    position: relative;
-    border-radius: var(--radius);
-    overflow: hidden;
-    background: #000;
-    border: 1px solid var(--line);
-    aspect-ratio: 1920 / 180;
-  }
-  .monitor .band { position: absolute; inset: 0; background: var(--band); }
-  .monitor iframe {
-    position: absolute; left: 0; top: 0;
-    width: 1920px; height: 180px; border: 0;
-    transform-origin: 0 0;
-    background: transparent;
-  }
-  .monitor .tag {
-    position: absolute; right: 10px; top: 8px;
-    font-size: 12px; color: var(--muted);
-  }
+
+  /* Stage: the projector's view, with everything that changes it right underneath. */
+  .stage { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--crust); }
+  .monitor { position: relative; aspect-ratio: 1920 / 180; max-height: 18vh; margin: 0 auto; background: var(--band); overflow: hidden; }
+  .monitor iframe { position: absolute; left: 0; top: 0; width: 1920px; height: 180px; border: 0; transform-origin: 0 0; background: transparent; }
+  .monitor .tag { position: absolute; right: 12px; top: 8px; font-size: 12px; color: var(--muted); }
+  .look { display: flex; align-items: center; gap: 18px; padding: 10px 14px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .look .buttons { display: flex; gap: 8px; }
+  .look .buttons button { padding: 8px 14px; }
+  .look .sep { width: 1px; align-self: stretch; background: var(--line); }
+  .look label { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); white-space: nowrap; }
+  .look input[type=range] { width: 130px; }
+  .look select { padding: 5px 8px; }
+  button.toggle[aria-pressed=false] { color: var(--muted); background: transparent; }
+
   .alert {
-    margin: 12px 0 0;
-    padding: 10px 14px;
-    border-radius: var(--radius);
-    background: rgba(228, 87, 46, 0.16);
-    border: 1px solid rgba(228, 87, 46, 0.6);
-    display: none;
+    padding: 10px 16px; border-radius: var(--radius); font-weight: 600;
+    background: rgba(228, 87, 46, 0.16); border: 1px solid rgba(228, 87, 46, 0.65);
   }
-  .alert.show { display: block; }
+  .alert:empty { display: none; }
+  header { grid-row: 1; } .stage { grid-row: 2; } .alert { grid-row: 3; } main { grid-row: 4; } .setup { grid-row: 5; }
 
-  main { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
-  section { background: var(--crust); border-radius: var(--radius); padding: 14px 16px; border: 1px solid var(--line); }
-  section.wide { grid-column: 1 / -1; }
-  .row { display: flex; align-items: center; gap: 10px; margin: 8px 0; flex-wrap: wrap; }
-  .row label { min-width: 120px; color: var(--muted); }
+  /* Three columns: how it is going on the left, what you change on the right. */
+  main { display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 12px; min-height: 0; }
+  .panel { background: var(--crust); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; flex: none; }
+  .panel + .panel { margin-top: 12px; }
+  .col { display: flex; flex-direction: column; }
+  .col > .panel:last-child { flex: 1 0 auto; }  /* the columns end on one line */
+  .col.health .panel { flex: 1 1 0; min-height: 300px; }  /* only the events list shrinks; it scrolls */
+  .row { display: flex; align-items: center; gap: 10px; margin: 7px 0; }
+  .row > .label { width: 74px; flex: none; color: var(--muted); }
   .row select { flex: 1; min-width: 0; }
+  .check { display: flex; gap: 10px; align-items: flex-start; margin: 9px 0 0; }
+  .check input { margin-top: 2px; flex: none; }
+  .check span { color: var(--muted); }
+  .check b { color: var(--flour); font-weight: 600; }
 
-  /* Level meter: green band for speech, the needle shows peak. */
-  .meter { position: relative; height: 18px; border-radius: 9px; background: #1d0f0d; overflow: hidden; flex: 1; }
-  .meter .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, var(--basil) 0 70%, var(--cheese) 70% 88%, var(--tomato) 88%); transition: width 80ms linear; }
-  .meter .peak { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--flour); left: 0; }
-  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #5a3f39; vertical-align: middle; }
-  .dot.on { background: var(--basil); }
+  .verdict { font-size: 30px; font-weight: 800; font-stretch: 75%; line-height: 1.1; }
+  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 12px 0 4px; }
+  .stat { border-left: 2px solid var(--line); padding: 1px 0 1px 10px; }
+  .stat .v { font-size: 20px; font-weight: 700; font-stretch: 75%; font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .stat .k { font-size: 12px; color: var(--muted); }
+  /* Local models: one row each, read across. */
+  .workers { display: grid; grid-template-columns: 10px auto minmax(0, 1fr) auto auto; gap: 4px 10px; align-items: center; align-content: start; flex: none; font-size: 13px; line-height: 1.35; margin-top: 6px; }
+  .workers .dot { width: 9px; height: 9px; }
+  .workers .dot.ok { background: var(--basil); } .workers .dot.warn { background: var(--cheese); } .workers .dot.bad { background: var(--tomato); }
+  .workers .kind { font-weight: 600; }
+  .workers .mname { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .workers .mem { color: var(--muted); text-align: right; }
+  .workers .err { grid-column: 2 / -1; color: var(--tomato); font-size: 12px; }
+  .events-head { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  ul.events { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; min-height: 60px; font-size: 13px; }
+  ul.events li { padding: 4px 0; border-bottom: 1px solid var(--line); display: flex; gap: 10px; }
+  ul.events .t { font-stretch: 75%; color: var(--muted); flex: none; }
 
-  /* Spoken language: big segmented control, the most used action. */
-  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  .seg button { padding: 14px 8px; font-size: 16px; line-height: 1.25; }
-  .seg button small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+  .seg { display: grid; gap: 6px; }
+  .seg.three { grid-template-columns: repeat(3, 1fr); }
+  .seg.two { grid-template-columns: repeat(2, 1fr); }
+  .seg button { padding: 11px 10px; font-size: 15px; line-height: 1.25; text-align: left; }
+  .seg button small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); margin-top: 2px; }
   .seg button[aria-pressed=true] { background: var(--flour); color: var(--band); border-color: var(--flour); }
   .seg button[aria-pressed=true] small { color: #6d4f48; }
 
-  .session { padding: 10px 12px; border-radius: 8px; background: var(--crust-2); margin-top: 8px; }
-  .session .when { font-stretch: 75%; color: var(--muted); }
-  .lang { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 7px; border-radius: 6px; border: 1px solid var(--line); }
+  .meter { position: relative; height: 16px; border-radius: 8px; background: #1d0f0d; overflow: hidden; flex: 1; }
+  .meter .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, var(--basil) 0 70%, var(--cheese) 70% 88%, var(--tomato) 88%); transition: width 80ms linear; }
+  .meter .peak { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--flour); left: 0; }
+  .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #5a3f39; flex: none; }
+  .dot.on { background: var(--basil); }
 
-  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .actions button { padding: 11px; }
-  button.toggle[aria-pressed=false] { color: var(--muted); }
-
-  .health { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
-  .stat { background: var(--crust-2); border-radius: 8px; padding: 10px 12px; }
-  .stat .v { font-size: 26px; font-weight: 700; font-stretch: 75%; font-variant-numeric: tabular-nums; line-height: 1.1; }
-  .stat .k { font-size: 13px; color: var(--muted); }
-  .ok { color: var(--basil); }
-  .warn { color: var(--cheese); }
-  .bad { color: var(--tomato); }
-  ul.events { list-style: none; margin: 0; padding: 0; max-height: 210px; overflow: auto; font-size: 13px; }
-  ul.events li { padding: 3px 0; border-bottom: 1px solid var(--line); }
-  ul.events .t { font-stretch: 75%; color: var(--muted); margin-right: 8px; }
-  .workers { font-size: 13px; }
-  .workers div { margin: 3px 0; }
-  details summary { cursor: pointer; color: var(--muted); }
-  #conn { font-size: 13px; }
-
-  @media (max-width: 1100px) {
-    main { grid-template-columns: 1fr; }
-    .health { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* Setup bar: things you set before the day; each opens a panel. */
+  .setup { display: flex; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .setup .muted { margin-right: 6px; }
+  .setup button { font-weight: 500; }
+  dialog {
+    background: var(--crust); color: var(--flour); border: 1px solid var(--line); border-radius: 12px;
+    width: min(760px, 92vw); padding: 18px 22px 20px;
   }
-  @media (prefers-reduced-motion: reduce) { .meter .fill { transition: none; } }
+  dialog::backdrop { background: rgba(20, 8, 6, 0.6); }
+  dialog .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  dialog .head h2 { margin: 0; font-size: 17px; }
+  dialog h3 { font-size: 14px; margin: 16px 0 2px; }
+  dialog .row > label:first-child { width: 150px; flex: none; color: var(--muted); }
+  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+  .model { margin: 10px 0; }
+  .model > label { display: block; color: var(--muted); margin-bottom: 4px; }
+  .model .row { margin: 0; }
+  .model select { flex: 1; min-width: 0; text-overflow: ellipsis; }
+  #gi-full { white-space: pre-wrap; font: 13px/1.5 "Open Sans", sans-serif; color: var(--muted); max-height: 220px; overflow: auto; margin: 6px 0 0; }
+  details summary { cursor: pointer; color: var(--muted); margin-top: 10px; }
+
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr 1fr; } .col.health { grid-row: span 2; } }
+  /* Half a laptop screen: the page scrolls, columns stack, nothing squeezes. */
+  @media (max-width: 1000px) {
+    body { min-height: 0; }
+    .col.health .panel { flex: none; min-height: 0; }
+    header { flex-wrap: wrap; row-gap: 8px; }
+    .talks { order: 5; flex-basis: 100%; padding-left: 0; border-left: 0; }
+    #startstop { margin-left: auto; }
+    main { grid-template-columns: 1fr; }
+    .col.health { grid-row: auto; }
+    ul.events { min-height: 80px; max-height: 220px; }
+    .look { gap: 10px 14px; }
+    .look .sep { display: none; }
+    .look .buttons { flex-wrap: wrap; }
+    .setup { flex-wrap: wrap; }
+  }
+  @media (prefers-reduced-motion: reduce) { .meter .fill { transition: none; } .state.on::before { animation: none; } }
 </style>
 </head>
 <body>
 <header>
-  <h1>Live subtitles</h1>
-  <span id="runstate" class="off">Stopped</span>
-  <span id="conn" class="muted">Connecting…</span>
-  <span class="grow"></span>
+  <div class="brand"><b>eels</b></div>
+  <span id="runstate" class="state off">Stopped</span>
+  <div class="talks">
+    <div class="talk" id="cur-session"></div>
+    <div class="talk" id="next-session"></div>
+  </div>
+  <span id="conn" class="muted"></span>
   <button id="startstop" class="start">Start</button>
 </header>
 
-<div class="monitor" id="monitor">
-  <div class="band"></div>
-  <iframe src="/" title="What the projector shows" id="mon-frame"></iframe>
-  <span class="tag">On screen now</span>
-</div>
-<div class="alert" id="alert"></div>
-
-<main>
-  <section>
-    <h2>Audio input</h2>
-    <div class="row"><label for="device">Device</label><select id="device"></select><button id="refresh" title="Rescan devices">Rescan</button></div>
-    <div class="row"><label for="channel">Channel</label>
-      <select id="channel"><option value="mono">Both, mixed to mono</option><option value="left">Left only</option><option value="right">Right only</option></select></div>
-    <div class="row"><label>Level</label><div class="meter"><div class="fill" id="meter-fill"></div><div class="peak" id="meter-peak"></div></div><span class="num" id="level-db" style="width:64px;text-align:right">-</span></div>
-    <div class="row"><label for="auto-gain">Lift quiet input</label><input type="checkbox" id="auto-gain" style="width:auto"><span class="muted num" id="gain"></span></div>
-    <div class="row"><label>Speech detected</label><span class="dot" id="speech-dot"></span><span class="muted" id="source-info"></span></div>
-    <details>
-      <summary>Play a file instead (test mode)</summary>
-      <div class="row"><input id="file-path" placeholder="/path/to/talk.mp3" style="flex:1"><input id="file-speed" type="number" value="1" step="0.5" min="0.5" max="8" title="Speed"></div>
-      <div class="row"><button id="play-file">Play file</button><button id="use-live">Back to live input</button></div>
-    </details>
-  </section>
-
-  <section>
-    <h2>Spoken language</h2>
-    <div class="seg" id="lang-seg">
-      <button data-lang="en" aria-pressed="false">English<small>Turkish subtitles</small></button>
-      <button data-lang="tr" aria-pressed="false">Turkish<small>English subtitles</small></button>
-      <button data-lang="auto" aria-pressed="false">Detect<small>follows the speaker</small></button>
-    </div>
-    <div class="row"><label for="auto-sched">Follow schedule</label><input type="checkbox" id="auto-sched" style="width:auto"><span class="muted">Sets the language when each session starts. Your change holds until the next session.</span></div>
-    <div class="row"><label for="gender-neutral">Gender-neutral</label><input type="checkbox" id="gender-neutral" style="width:auto"><span class="muted">Turkish has no he/she; English subtitles say "they" unless the speaker names a gender.</span></div>
-    <div class="session" id="cur-session"><span class="muted">No session right now</span></div>
-    <div class="session" id="next-session" style="opacity:.75"></div>
-  </section>
-
-  <section>
-    <h2>On screen</h2>
-    <div class="actions">
+<div class="stage">
+  <div class="monitor" id="monitor">
+    <iframe src="/" title="What the projector shows" id="mon-frame"></iframe>
+    <span class="tag">On screen now</span>
+  </div>
+  <div class="look">
+    <div class="buttons">
       <button id="visible" class="toggle" aria-pressed="true">Subtitles shown</button>
       <button id="clear">Clear now</button>
       <button id="test">Show test text</button>
-      <button id="interim" class="toggle" aria-pressed="true">Live preview text on</button>
+      <button id="interim" class="toggle" aria-pressed="true">Live preview on</button>
     </div>
-    <div class="row"><label for="font-size">Font size</label><input type="range" id="font-size" min="36" max="80" step="1" style="flex:1"><span class="num" id="font-size-v" style="width:52px"></span></div>
-    <div class="row"><label for="lines">Lines</label><select id="lines" style="flex:0 0 72px"><option>1</option><option>2</option><option>3</option></select></div>
-    <div class="row"><label for="clear-after">Clear after silence</label><input type="number" id="clear-after" min="1" max="120" step="1"><span class="muted">s</span></div>
-    <div class="row"><label for="shadow">Text shadow</label><input type="checkbox" id="shadow" style="width:auto">
-      <label for="offset" style="min-width:auto">Move up/down</label><input type="number" id="offset" min="-90" max="90" step="2"><span class="muted">px</span></div>
-  </section>
+    <span class="sep"></span>
+    <label>Size <input type="range" id="font-size" min="36" max="80" step="1"><span class="num" id="font-size-v" style="width:42px;color:var(--flour)"></span></label>
+    <label>Lines <select id="lines"><option>1</option><option>2</option><option>3</option></select></label>
+    <label>Clear after <input type="number" id="clear-after" min="1" max="120" step="1"> s</label>
+    <label>Move <input type="number" id="offset" min="-90" max="90" step="2"> px</label>
+    <label><input type="checkbox" id="shadow"> Shadow</label>
+  </div>
+</div>
 
-  <section class="wide">
-    <h2>Keeping up</h2>
-    <div class="health">
-      <div class="stat"><div class="v" id="h-keep">-</div><div class="k">Pipeline</div></div>
-      <div class="stat"><div class="v num" id="h-first">-</div><div class="k">Delay to first text (median / p95)</div></div>
-      <div class="stat"><div class="v num" id="h-conf">-</div><div class="k">Delay to final text (median / p95)</div></div>
-      <div class="stat"><div class="v num" id="h-asr">-</div><div class="k">Speech recognition per pass</div></div>
-      <div class="stat"><div class="v num" id="h-mt">-</div><div class="k">Translation per clause</div></div>
-      <div class="stat"><div class="v num" id="h-backlog">-</div><div class="k">Audio waiting</div></div>
-    </div>
-    <div class="row workers" id="workers"></div>
-  </section>
+<div class="alert" id="alert" role="alert"></div>
 
-  <section>
-    <h2>Recent events</h2>
-    <ul class="events" id="events"></ul>
-  </section>
+<main>
+  <div class="col health">
+    <section class="panel">
+      <h2>Keeping up</h2>
+      <div class="verdict" id="h-keep">-</div>
+      <div class="muted" id="h-engine"></div>
+      <div class="stats">
+        <div class="stat"><div class="v num" id="h-first">-</div><div class="k">First text, median / p95</div></div>
+        <div class="stat"><div class="v num" id="h-conf">-</div><div class="k">Final text, median / p95</div></div>
+        <div class="stat"><div class="v num" id="h-third">-</div><div class="k" id="h-third-k">Audio waiting</div></div>
+      </div>
+      <div class="workers" id="workers"></div>
+      <h2 class="events-head">Recent events</h2>
+      <ul class="events" id="events"></ul>
+    </section>
+  </div>
 
-  <section>
-    <h2>Captions for recordings</h2>
-    <div class="row"><label for="srt-day">Day</label><select id="srt-day"></select></div>
-    <div class="row"><label for="srt-from">From</label><input id="srt-from" value="11:15" size="8"><label for="srt-to" style="min-width:auto">to</label><input id="srt-to" value="11:40" size="8"></div>
-    <div class="row"><label for="srt-text">Text</label><select id="srt-text"><option value="translation">Translation</option><option value="source">What was said</option><option value="both">Both</option></select></div>
-    <div class="row"><label for="srt-offset">Offset</label><input type="number" id="srt-offset" value="0" step="0.5"><span class="muted">s added to every cue</span></div>
-    <div class="row"><button id="srt-go">Download SRT</button></div>
-  </section>
+  <div class="col">
+    <section class="panel">
+      <h2>Spoken language</h2>
+      <div class="seg three" id="lang-seg">
+        <button data-lang="en" aria-pressed="false">English<small>Turkish subtitles</small></button>
+        <button data-lang="tr" aria-pressed="false">Turkish<small>English subtitles</small></button>
+        <button data-lang="auto" aria-pressed="false">Detect<small>Either language</small></button>
+      </div>
+      <label class="check" title="Sets the language when each talk starts; a change you make holds until the next talk."><input type="checkbox" id="auto-sched"><span><b>Follow schedule</b>, language set per talk</span></label>
+      <label class="check" title="Turkish has no he/she: English subtitles say &quot;they&quot; unless the speaker names a gender."><input type="checkbox" id="gender-neutral"><span><b>Gender-neutral English</b>, "they" for he/she</span></label>
+    </section>
+    <section class="panel">
+      <h2>Engine</h2>
+      <div class="seg two" id="engine-seg">
+        <button data-engine="local" aria-pressed="false">Local<small>On this Mac, offline</small></button>
+        <button data-engine="gemini" aria-pressed="false">Gemini<small>Cloud, local as backup</small></button>
+      </div>
+      <p class="note" id="gemini-info"></p>
+      <label class="check" id="standby-row" hidden title="On: Whisper and the translation models stay in memory (about 3 GB) and take over at once if Gemini fails. Off: they are unloaded and load when Gemini fails, about 3 s later."><input type="checkbox" id="standby"><span><b>Keep local models loaded</b>, instant backup (about 3 GB)</span></label>
+    </section>
+  </div>
 
-  <section>
-    <h2>Schedule and models</h2>
-    <div class="row"><button id="update-sched">Fetch schedule from the website</button></div>
-    <div class="muted" id="sched-info"></div>
-    <div class="model"><label for="m-asr">Speech model</label>
-      <div class="row"><select id="m-asr"></select><button id="m-asr-go">Switch</button></div></div>
-    <div class="model"><label for="m-mt_en_tr">Translation, English → Turkish</label>
-      <div class="row"><select id="m-mt_en_tr"></select><button id="m-mt_en_tr-go">Switch</button></div></div>
-    <div class="model"><label for="m-mt_tr_en">Translation, Turkish → English</label>
-      <div class="row"><select id="m-mt_tr_en"></select><button id="m-mt_tr_en-go">Switch</button></div></div>
-    <div class="muted" id="m-note">The new model loads while the current one keeps running, then they swap. Subtitles do not pause.</div>
-  </section>
+  <div class="col">
+    <section class="panel">
+      <h2>Audio input</h2>
+      <div class="row"><span class="label">Device</span><select id="device"></select><button id="refresh" title="Look for plugged-in devices again">Rescan</button></div>
+      <div class="row"><span class="label">Channel</span>
+        <select id="channel"><option value="mono">Both, mixed to mono</option><option value="left">Left only</option><option value="right">Right only</option></select></div>
+      <div class="row"><span class="label">Level</span><div class="meter"><div class="fill" id="meter-fill"></div><div class="peak" id="meter-peak"></div></div><span class="num" id="level-db" style="width:52px;text-align:right">-</span></div>
+      <div class="row"><span class="label">Speech</span><span class="dot" id="speech-dot"></span><span class="muted" id="source-info"></span></div>
+      <label class="check"><input type="checkbox" id="auto-gain"><span><b>Lift quiet input</b> (up to +26 dB). <span class="num" id="gain"></span></span></label>
+    </section>
+  </div>
 </main>
+
+<div class="setup">
+  <span class="muted">Setup</span>
+  <button data-open="dlg-gi">Gemini</button>
+  <button data-open="dlg-models">Local models</button>
+  <button data-open="dlg-srt">Captions for recordings</button>
+  <button data-open="dlg-sched">Schedule</button>
+  <button data-open="dlg-file">Test with a file</button>
+</div>
+
+<dialog id="dlg-gi">
+  <div class="head"><h2>Gemini</h2><button data-close>Close</button></div>
+  <h3>Key</h3>
+  <p class="note">Saved in this Mac's Keychain (item eels-gemini). Use a key from a project with billing enabled. The key is not shown again. <span id="key-info"></span></p>
+  <div class="row"><input id="key-input" type="password" autocomplete="off" spellcheck="false" placeholder="Paste a new key" style="flex:1"><button id="key-save" disabled>Save key</button></div>
+  <div class="muted" id="key-state"></div>
+  <h3>Instructions</h3>
+  <p class="note">Your text is added to what Gemini already gets: the day's talks, names to keep, and conference terms. Applying reconnects Gemini, about a second without subtitles.</p>
+  <textarea id="gi-extra" rows="5" maxlength="4000" placeholder="For example: Keep the word deploy in English." style="margin-top:10px"></textarea>
+  <div class="row"><button id="gi-apply" disabled>Apply…</button><button id="gi-cancel" hidden>Cancel</button><span class="muted" id="gi-state"></span></div>
+  <details><summary>Show everything Gemini gets now</summary><pre id="gi-full"></pre></details>
+</dialog>
+
+
+<dialog id="dlg-models">
+  <div class="head"><h2>Local models</h2><button data-close>Close</button></div>
+  <p class="note" id="models-lock" hidden></p>
+  <fieldset id="models-set">
+    <div class="model"><label for="m-speech">Speech recognition</label>
+      <div class="row"><select id="m-speech"></select><button id="m-speech-go">Switch</button></div>
+      <div class="note" id="m-speech-note"></div></div>
+    <div class="model"><label for="m-translation_en_tr">Translation, English to Turkish</label>
+      <div class="row"><select id="m-translation_en_tr"></select><button id="m-translation_en_tr-go">Switch</button></div>
+      <div class="note" id="m-translation_en_tr-note"></div></div>
+    <div class="model"><label for="m-translation_tr_en">Translation, Turkish to English</label>
+      <div class="row"><select id="m-translation_tr_en"></select><button id="m-translation_tr_en-go">Switch</button></div>
+      <div class="note" id="m-translation_tr_en-note"></div></div>
+  </fieldset>
+  <p class="note" id="m-note">The new model loads while the current one keeps running, then they swap. Subtitles do not pause.</p>
+</dialog>
+
+<dialog id="dlg-srt">
+  <div class="head"><h2>Captions for recordings</h2><button data-close>Close</button></div>
+  <div class="row"><label for="srt-day">Day</label><select id="srt-day" style="flex:0 0 160px"></select></div>
+  <div class="row"><label for="srt-from">From</label><input id="srt-from" value="11:15" size="8"><span class="muted">to</span><input id="srt-to" value="11:40" size="8"></div>
+  <div class="row"><label for="srt-text">Text</label><select id="srt-text" style="flex:0 0 220px"><option value="translation">Translation</option><option value="source">What was said</option><option value="both">Both</option></select></div>
+  <div class="row"><label for="srt-offset">Shift every cue by</label><input type="number" id="srt-offset" value="0" step="0.5"><span class="muted">seconds</span></div>
+  <div class="row"><button id="srt-go">Download SRT</button></div>
+</dialog>
+
+<dialog id="dlg-sched">
+  <div class="head"><h2>Schedule</h2><button data-close>Close</button></div>
+  <div class="row"><button id="update-sched">Fetch schedule from the website</button><span class="muted" id="sched-info"></span></div>
+</dialog>
+
+<dialog id="dlg-file">
+  <div class="head"><h2>Test with a file</h2><button data-close>Close</button></div>
+  <p class="note">Plays a recording through eels instead of the microphone.</p>
+  <div class="row"><input id="file-path" placeholder="/path/to/talk.mp3" style="flex:1"><input id="file-speed" type="number" value="1" step="0.5" min="0.5" max="8" title="Playback speed"></div>
+  <div class="row"><button id="play-file">Play file</button><button id="use-live">Back to the microphone</button></div>
+</dialog>
 
 <script>
 (() => {
@@ -252,7 +345,7 @@
   let ws, settings = null, devices = [];
   let delay = 500;
 
-  // Scale the overlay iframe to the monitor width.
+  // Scale the overlay iframe to the monitor's size.
   const mon = $("monitor"), frame = $("mon-frame");
   const fit = () => { frame.style.transform = `scale(${mon.clientWidth / 1920})`; };
   new ResizeObserver(fit).observe(mon); fit();
@@ -262,7 +355,7 @@
 
   function connect() {
     ws = new WebSocket(`ws://${location.host}/ws/control`);
-    ws.onopen = () => { delay = 500; $("conn").textContent = "Connected"; send({ cmd: "models" }); };
+    ws.onopen = () => { delay = 500; $("conn").textContent = ""; send({ cmd: "models" }); };
     ws.onclose = () => {
       $("conn").textContent = "Server not reachable, retrying…";
       setTimeout(connect, delay); delay = Math.min(delay * 2, 5000);
@@ -273,10 +366,21 @@
       else if (m.type === "level") onLevel(m);
       else if (m.type === "devices") { devices = m.devices; renderDevices(); }
       else if (m.type === "models") { catalog = m; renderModels(); }
-      else if (m.type === "schedule") { $("sched-info").textContent = (m.msg || "") + ` ${m.sessions.length} sessions in schedule.`; }
-      else if (m.type === "error") addLocalEvent("error", m.msg);
+      else if (m.type === "schedule") { $("sched-info").textContent = `${m.msg ? m.msg + ". " : ""}${m.sessions.length} sessions in the schedule.`; }
+      else if (m.type === "gemini_instruction") onGeminiInstruction(m);
+      else if (m.type === "gemini_key") { $("key-state").textContent = m.msg; $("key-state").className = m.ok ? "ok" : "bad"; if (m.ok) $("key-input").value = ""; $("key-save").disabled = true; }
+      else if (m.type === "error") addLocalEvent(m.msg);
     };
   }
+
+  // Setup panels.
+  for (const b of document.querySelectorAll("[data-open]")) b.onclick = () => {
+    const d = $(b.dataset.open);
+    d.showModal();
+    if (d.id === "dlg-gi") send({ cmd: "gemini_instruction" });
+  };
+  for (const b of document.querySelectorAll("[data-close]")) b.onclick = () => b.closest("dialog").close();
+  $("dlg-gi").onclose = () => { giReset(); $("key-input").value = ""; $("key-save").disabled = true; $("key-state").textContent = ""; };
 
   function renderDevices() {
     const sel = $("device");
@@ -300,31 +404,39 @@
     }
   }
 
-  function fmtS(v) { return v == null ? "-" : v.toFixed(1) + " s"; }
-  function fmtPair(a, b) { return a == null ? "-" : `${a.toFixed(1)} / ${b.toFixed(1)} s`; }
+  const fmtS = v => v == null ? "-" : v.toFixed(1) + " s";
+  const fmtPair = (a, b) => a == null ? "-" : `${a.toFixed(1)} / ${b.toFixed(1)} s`;
+  const escapeHtml = t => (t || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   function sessionHtml(s, label) {
-    if (!s) return `<span class="muted">${label}: none</span>`;
+    if (!s) return `<span class="when">${label}</span><span class="muted">No talk</span>`;
     const lang = s.lang ? s.lang.toUpperCase() : "Detect";
-    const who = s.speaker && s.speaker.length < 60 ? ` with ${escapeHtml(s.speaker)}` : "";
-    return `<div class="when">${label} ${s.start}–${s.end}</div><div><span class="lang">${lang}</span> ${escapeHtml(s.title)}${who}</div>`;
+    const who = s.speaker && s.speaker.length < 60 ? `, ${escapeHtml(s.speaker)}` : "";
+    return `<span class="when">${label} ${s.start}</span><span class="lang">${lang}</span>${escapeHtml(s.title)}${who}`;
   }
-  function escapeHtml(t) { return (t || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+  const DIR_NAMES = { "en>tr": "EN→TR", "tr>en": "TR→EN" };
 
   let lastEventsKey = "";
   function onStatus(st) {
+    // st: status.Status, in sections (run, audio, engine, delays, local, models, gemini, talks, events).
     const first = settings === null;
     settings = st.settings;
     if (first) renderDevices();
-    $("runstate").textContent = st.running ? (st.source === "file" ? "Running (test file)" : "Running") : "Stopped";
-    $("runstate").className = st.running ? "on" : "off";
+    const { run, audio, engine, delays, local } = st;
+    $("runstate").textContent = run.running ? (run.source === "file" ? "Test file" : "Running") : "Stopped";
+    $("runstate").className = "state " + (run.running ? "on" : "off");
     const ss = $("startstop");
-    ss.textContent = st.running ? "Stop" : "Start";
-    ss.className = st.running ? "stop" : "start";
+    ss.textContent = run.running ? "Stop" : "Start";
+    ss.className = run.running ? "stop" : "start";
 
-    const alert = $("alert");
-    alert.textContent = st.audio_error || "";
-    alert.classList.toggle("show", !!st.audio_error);
+    const gem = engine.chosen === "gemini";
+    const onGemini = engine.on_screen === "gemini";
+    const fallback = gem && run.running && !onGemini
+      ? (engine.gemini_key ? "Gemini is not responding. Subtitles come from the local models until it is back."
+                           : "No Gemini key on this Mac. Subtitles come from the local models.")
+      : "";
+    $("alert").textContent = [audio.error, fallback].filter(Boolean).join(" ");
 
     // Only overwrite inputs the operator is not editing.
     const active = document.activeElement;
@@ -338,40 +450,87 @@
     put("auto-sched", settings.auto_from_schedule, "checked");
     put("auto-gain", settings.auto_gain, "checked");
     put("gender-neutral", settings.gender_neutral, "checked");
+    put("standby", settings.gemini_standby, "checked");
+    $("key-info").textContent = engine.gemini_key === "environment" ? "Key from GEMINI_API_KEY."
+      : engine.gemini_key === "keychain" ? "A key is saved." : "No key yet.";
     if ($("device") !== active && $("device").value !== (settings.device_name || "")) renderDevices();
 
     for (const b of document.querySelectorAll("#lang-seg button")) b.setAttribute("aria-pressed", b.dataset.lang === settings.spoken_language);
+    for (const b of document.querySelectorAll("#engine-seg button")) b.setAttribute("aria-pressed", b.dataset.engine === engine.chosen);
     const vis = $("visible");
     vis.setAttribute("aria-pressed", settings.visible); vis.textContent = settings.visible ? "Subtitles shown" : "Subtitles hidden";
     const intr = $("interim");
-    intr.setAttribute("aria-pressed", settings.interim); intr.textContent = settings.interim ? "Live preview text on" : "Final text only";
+    intr.setAttribute("aria-pressed", settings.interim); intr.textContent = settings.interim ? "Live preview on" : "Final text only";
 
-    $("cur-session").innerHTML = sessionHtml(st.session, "Now");
-    $("next-session").innerHTML = sessionHtml(st.next_session, "Next");
+    $("cur-session").innerHTML = sessionHtml(st.talk_now, "Now");
+    $("next-session").innerHTML = sessionHtml(st.talk_next, "Next");
 
+    // Engine note, and the lock on the local model pickers.
+    const g = st.gemini;
+    $("gemini-info").textContent = !gem ? "Whisper and the translation models run on this Mac."
+      : !engine.gemini_key ? "No Gemini key yet: Setup, Gemini."
+      : !run.running ? "Gemini connects when you press Start."
+      : onGemini ? `Gemini is on screen. About $${g.cost_usd.toFixed(2)} so far.`
+      : "Gemini is not responding; the local models are on screen.";
+    // Gemini mode: the local models are its backup. Changeable while loaded; locked while unloaded.
+    const unloaded = gem && !settings.gemini_standby;
+    $("standby-row").hidden = !gem;
+    $("models-set").disabled = unloaded;
+    $("models-lock").hidden = !gem;
+    $("models-lock").textContent = unloaded
+      ? "Gemini is the engine and these models are unloaded. To change them, turn on Keep local models loaded (Engine) or switch the engine to Local."
+      : "Gemini is the engine; these models are its backup. Changing them does not affect what is on screen now.";
+
+    // Keeping up.
     const k = $("h-keep");
-    const busy = st.workers.some(w => w.state === "loading" || w.state === "restarting");
-    if (busy) { k.textContent = "Loading"; k.className = "v warn"; }
-    else if (st.workers.some(w => w.state === "error")) { k.textContent = "Model error"; k.className = "v bad"; }
-    else if (!st.running) { k.textContent = "Idle"; k.className = "v muted"; }
-    else if (st.keeping_up) { k.textContent = "Keeping up"; k.className = "v ok"; }
-    else { k.textContent = "Behind"; k.className = "v bad"; }
-    $("h-first").textContent = settings.interim ? fmtPair(st.delay_interim_p50, st.delay_interim_p95) : "off";
-    $("h-conf").textContent = fmtPair(st.delay_confirmed_p50, st.delay_confirmed_p95);
-    $("h-asr").textContent = st.asr_ms == null ? "-" : `${st.asr_ms} ms`;
-    $("h-mt").textContent = st.mt_ms == null ? "-" : `${st.mt_ms} ms`;
-    $("h-backlog").textContent = fmtS(st.backlog_s) + (st.skips ? ` (${st.skips} skips)` : "");
-    $("h-backlog").className = "v num " + (st.backlog_s > 2 ? "bad" : "");
-
-    $("workers").innerHTML = st.workers.map(w => {
-      const cls = w.state === "ready" || w.state === "busy" ? "ok" : w.state === "error" ? "bad" : "warn";
-      const err = w.errors.length ? ` <span class="bad">last error ${w.errors[w.errors.length - 1].t}: ${escapeHtml(w.errors[w.errors.length - 1].msg)}</span>` : "";
-      return `<div><b>${escapeHtml(w.label || (w.name === "asr" ? "Speech recognition" : "Translation"))}</b>: <span class="${cls}">${w.state}</span>${w.restarts ? `, ${w.restarts} restarts` : ""}${err}</div>`;
+    const busy = st.models.some(m => m.state === "loading" || m.state === "restarting");
+    if (!run.running) { k.textContent = "Idle"; k.className = "verdict muted"; }
+    else if (busy && !onGemini) { k.textContent = "Loading models"; k.className = "verdict warn"; }
+    else if (!onGemini && st.models.some(m => m.state === "error")) { k.textContent = "Model error"; k.className = "verdict bad"; }
+    else if (engine.keeping_up) { k.textContent = "Keeping up"; k.className = "verdict ok"; }
+    else { k.textContent = onGemini ? "Reconnecting" : "Falling behind"; k.className = "verdict bad"; }
+    const conns = g && g.sessions.length ? g.sessions.map(x => `to ${x.target.toUpperCase()} ${x.state}`).join(", ") : "";
+    $("h-engine").textContent = !run.running ? `${gem ? "Gemini" : "Local models"} when you press Start.`
+      : onGemini ? `Gemini${conns ? ", " + conns : ""}`
+      : `Local models${gem ? " (standing in for Gemini)" : ""}`
+        + (local.speech_ms != null ? `, speech ${local.speech_ms} ms per pass` : "")
+        + (local.translation_ms != null ? `, translation ${local.translation_ms} ms` : "");
+    $("h-first").textContent = settings.interim ? fmtPair(delays.first_p50, delays.first_p95) : "off";
+    $("h-conf").textContent = fmtPair(delays.final_p50, delays.final_p95);
+    if (onGemini && g) {
+      $("h-third").textContent = `$${g.cost_usd.toFixed(2)}`; $("h-third").className = "v num";
+      $("h-third-k").textContent = "Gemini cost so far";
+    } else {
+      $("h-third").textContent = fmtS(local.backlog_s) + (local.skips ? `, ${local.skips} skips` : "");
+      $("h-third").className = "v num " + (local.backlog_s > 2 ? "bad" : "");
+      $("h-third-k").textContent = "Audio waiting";
+    }
+    // Local models, one row each: light, job, model, state, memory. An error gets its own line.
+    const split = st.models.filter(m => m.job === "translation").length > 1;
+    $("workers").innerHTML = st.models.map(m => {
+      const loading = m.state === "loading" || m.state === "restarting";
+      const [light, word] =
+        m.state === "error" ? ["bad", "Failed"]
+        : m.role === "unloaded" ? ["", "Unloaded"]
+        : loading ? ["warn", `Loading${m.loading_s != null ? " " + m.loading_s + " s" : ""}`]
+        : m.state === "stopped" ? ["warn", "Not loaded"]
+        : ["ok", { "in use": "In use", "backup": "Backup", "idle": "Ready" }[m.role]];
+      const job = m.job === "speech" ? "Speech" : "Translation" + (split ? " " + m.directions.map(d => DIR_NAMES[d]).join(", ") : "");
+      const full = m.variant ? `${m.name}, ${m.variant}` : m.name;
+      const tip = m.role === "unloaded" ? "Loads if Gemini fails (about 3 s)." : m.role === "backup" ? "Takes over if Gemini fails." : "";
+      const err = m.last_error && (m.state === "error" || m.restarts) ? m.last_error : null;
+      return `<span class="dot ${light}"></span><span class="kind">${job}</span>`
+        + `<span class="mname" title="${escapeHtml(full)}">${escapeHtml(m.name)}</span>`
+        + `<span class="${light}" title="${tip}">${word}${m.restarts ? ` (${m.restarts} restarts)` : ""}</span>`
+        + `<span class="mem num">${m.memory_gb != null ? m.memory_gb.toFixed(1) + " GB" : ""}</span>`
+        + (err ? `<span class="err">${err.t}: ${escapeHtml(err.msg)}</span>` : "");
     }).join("");
+
     switching = st.switching || {};
     renderModels();
-    $("gain").textContent = st.gain_db > 0.5 ? `boost +${st.gain_db.toFixed(0)} dB` : "";
-    $("source-info").textContent = st.source === "file" ? `test file ${st.file || ""} at ${st.file_pos ?? 0} s` : (st.device ? `from ${st.device}` : "");
+    giSync(settings.gemini_extra_instruction || "");
+    $("gain").textContent = audio.gain_db > 0.5 ? `Boosting by ${audio.gain_db.toFixed(0)} dB now.` : "";
+    $("source-info").textContent = run.source === "file" ? `test file, at ${run.file_pos_s ?? 0} s` : (audio.device ? `from ${audio.device}` : "");
 
     const evKey = JSON.stringify(st.events);
     if (evKey !== lastEventsKey) {
@@ -381,7 +540,7 @@
     }
   }
 
-  function addLocalEvent(level, msg) {
+  function addLocalEvent(msg) {
     const li = document.createElement("li");
     li.innerHTML = `<span class="t">${new Date().toLocaleTimeString()}</span><span class="bad">${escapeHtml(msg)}</span>`;
     $("events").prepend(li);
@@ -395,22 +554,27 @@
     $("speech-dot").classList.toggle("on", m.speech);
   }
 
-  // Models
-  // The operator's choice is kept in `pending` so status refreshes (twice a second) never reset it.
+  // Local models. The operator's choice is kept in `pending` so status refreshes never reset it.
   let catalog = null, switching = {}, builtFor = "";
-  // One speech model; one translation model per direction (the same model may serve both).
-  const KINDS = ["asr", "mt_en_tr", "mt_tr_en"];
-  const pending = { asr: null, mt_en_tr: null, mt_tr_en: null };
-  const asrKey = (model, ctx) => `${model}|${ctx}`;
-  const currentKey = kind => kind === "asr" ? asrKey(settings.asr_model, settings.asr_audio_ctx)
-    : (settings[`mt_model_${kind.slice(3)}`] || settings.mt_model);
-  const isSwitching = kind => switching[kind] || (kind !== "asr" && switching.mt);
-  function buildSelect(sel, options, keyOf) {
+  const KINDS = ["speech", "translation_en_tr", "translation_tr_en"];
+  const pending = { speech: null, translation_en_tr: null, translation_tr_en: null };
+  const jobOf = kind => kind === "speech" ? "speech" : "translation";
+  const currentKey = kind => kind === "speech" ? settings.speech_model
+    : (settings[`translation_model_${kind.slice(12)}`] || settings.translation_model);
+  const isSwitching = kind => switching[kind] || (kind !== "speech" && switching.translation);
+  const info = key => [...(catalog.speech || []), ...(catalog.translation || [])].find(o => o.key === key);
+  function describe(o) {
+    if (!o) return "";
+    const facts = [o.runs_on, o.approx_gb != null ? `about ${o.approx_gb} GB` : ""].filter(Boolean).join(", ");
+    return `${o.note} ${facts ? "(" + facts + ")" : ""}`.trim();
+  }
+  function buildSelect(sel, options) {
     sel.innerHTML = "";
     for (const o of options) {
       const opt = document.createElement("option");
-      opt.value = keyOf(o);
-      opt.textContent = o.available ? o.label : `${o.label} (not downloaded)`;
+      opt.value = o.key;
+      opt.textContent = o.title + (o.available ? "" : " (not downloaded)");
+      opt.title = describe(o);
       opt.disabled = !o.available;
       sel.appendChild(opt);
     }
@@ -419,9 +583,7 @@
     if (!catalog || !settings) return;
     const sig = JSON.stringify(catalog);
     if (sig !== builtFor) {
-      buildSelect($("m-asr"), catalog.asr, o => asrKey(o.model, o.audio_ctx));
-      buildSelect($("m-mt_en_tr"), catalog.mt, o => o.model);
-      buildSelect($("m-mt_tr_en"), catalog.mt, o => o.model);
+      for (const kind of KINDS) buildSelect($(`m-${kind}`), catalog[jobOf(kind)]);
       builtFor = sig;
     }
     for (const kind of KINDS) {
@@ -430,28 +592,56 @@
       sel.value = pending[kind] || cur;
       btn.textContent = isSwitching(kind) ? "Loading…" : "Switch";
       btn.disabled = !!isSwitching(kind) || !pending[kind];
+      $(`m-${kind}-note`).textContent = describe(info(sel.value));
     }
-    const missing = [...catalog.asr, ...catalog.mt].some(o => !o.available);
+    const missing = [...catalog.speech, ...catalog.translation].some(o => !o.available);
     $("m-note").textContent = "The new model loads while the current one keeps running, then they swap. Subtitles do not pause."
-      + (missing ? " To use a model marked not downloaded, run `uv run eels download-models --all` while online." : "");
+      + (missing ? " Models marked not downloaded need `uv run eels download-models --all` while online." : "");
   }
   for (const kind of KINDS) {
     $(`m-${kind}`).onchange = e => {
       pending[kind] = e.target.value === currentKey(kind) ? null : e.target.value;
       renderModels();
     };
-  }
-  $("m-asr-go").onclick = () => {
-    const [model, audio_ctx] = pending.asr.split("|");
-    send({ cmd: "switch_model", kind: "asr", model, audio_ctx });
-    switching.asr = model; renderModels();
-  };
-  for (const kind of ["mt_en_tr", "mt_tr_en"]) {
     $(`m-${kind}-go`).onclick = () => {
-      send({ cmd: "switch_model", kind, model: pending[kind] });
+      send({ cmd: "switch_model", kind, key: pending[kind] });
       switching[kind] = pending[kind]; renderModels();
     };
   }
+
+  // Gemini instructions: the operator's addition, applied only after a second, confirming click.
+  let giSaved = null, giTimer = null;
+  const giDirty = () => giSaved !== null && $("gi-extra").value.trim() !== giSaved;
+  function giSync(saved) {
+    if (giSaved === null || (!giDirty() && saved !== giSaved)) $("gi-extra").value = saved;
+    giSaved = saved;
+    $("gi-apply").disabled = !giDirty() && !giTimer;
+  }
+  function giReset() {
+    clearTimeout(giTimer); giTimer = null;
+    $("gi-apply").textContent = "Apply…"; $("gi-apply").classList.remove("danger");
+    $("gi-cancel").hidden = true; $("gi-apply").disabled = !giDirty();
+  }
+  function onGeminiInstruction(m) {
+    $("gi-full").textContent = m.text;
+    if ($("gi-state").textContent === "Applying…") $("gi-state").textContent = `Applied at ${new Date().toLocaleTimeString()}.`;
+    giSync(m.extra || "");
+  }
+  $("gi-extra").oninput = () => { if (!giDirty()) giReset(); $("gi-apply").disabled = !giDirty(); };
+  $("gi-apply").onclick = () => {
+    if (!giTimer) {
+      $("gi-apply").textContent = "Confirm: reconnect Gemini with this";
+      $("gi-apply").classList.add("danger");
+      $("gi-cancel").hidden = false;
+      giTimer = setTimeout(giReset, 10000);  // the confirmation expires
+      return;
+    }
+    const extra = $("gi-extra").value;
+    giReset();
+    $("gi-state").textContent = "Applying…";
+    send({ cmd: "gemini_instruction", extra });
+  };
+  $("gi-cancel").onclick = giReset;
 
   // Controls
   $("startstop").onclick = () => send({ cmd: settings && $("startstop").textContent === "Stop" ? "stop" : "start" });
@@ -459,9 +649,14 @@
   $("refresh").onclick = () => send({ cmd: "devices" });
   $("channel").onchange = e => set({ channel: e.target.value });
   for (const b of document.querySelectorAll("#lang-seg button")) b.onclick = () => set({ spoken_language: b.dataset.lang });
+  for (const b of document.querySelectorAll("#engine-seg button")) b.onclick = () => set({ engine: b.dataset.engine });
   $("auto-sched").onchange = e => set({ auto_from_schedule: e.target.checked });
   $("auto-gain").onchange = e => set({ auto_gain: e.target.checked });
   $("gender-neutral").onchange = e => set({ gender_neutral: e.target.checked });
+  $("standby").onchange = e => set({ gemini_standby: e.target.checked });
+  $("key-input").oninput = e => { $("key-save").disabled = !e.target.value.trim(); $("key-state").textContent = ""; };
+  $("key-save").onclick = () => { $("key-state").textContent = "Saving…"; $("key-state").className = "muted"; send({ cmd: "gemini_key", key: $("key-input").value }); };
+
   $("visible").onclick = () => set({ visible: !settings.visible });
   $("interim").onclick = () => set({ interim: !settings.interim });
   $("clear").onclick = () => send({ cmd: "clear" });
