@@ -217,3 +217,16 @@ def test_cost_survives_stop_and_start():
         assert abs(g.cost_usd - spent) < 1e-9 and g.status().cost_usd == round(spent, 2)
     finally:
         g.shutdown()
+
+
+def test_shutdown_leaves_no_pending_tasks():
+    import asyncio as aio
+
+    server = FakeServer([[msg(output="Hello.")]] * 3)
+    g = GeminiLive(lambda *a: None, lambda *a: None, lambda *a: None, key="test", connect=server.connect)
+    g.set_targets(["en", "tr"])
+    time.sleep(0.2)
+    loop = g._loop
+    g.shutdown()
+    assert loop.is_closed() and not g._thread.is_alive()
+    assert all(task.done() for task in aio.all_tasks(loop))

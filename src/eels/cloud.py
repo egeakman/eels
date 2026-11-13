@@ -368,10 +368,16 @@ class GeminiLive:
         self.set_targets(targets, echo)
 
     def shutdown(self) -> None:
+        """Close every session cleanly, then end the client's thread and loop."""
         try:
-            self.stop()
+            asyncio.run_coroutine_threadsafe(self._close_all(), self._loop).result(timeout=8)
+        except Exception:
+            log.warning("gemini: sessions did not close in time")
         finally:
             self._loop.call_soon_threadsafe(self._loop.stop)
+            self._thread.join(timeout=3)
+            if not self._thread.is_alive():
+                self._loop.close()
 
     def feed(self, audio: np.ndarray) -> None:
         """16 kHz float32 audio from the capture (any chunk size)."""
@@ -412,18 +418,31 @@ class GeminiLive:
             targets_now, targets = targets, []  # stop everything, then start with the new setting
             await self._set_targets(targets, echo)
             targets = targets_now
+        closing = []
         for t in [t for t in self._tasks if t not in targets]:
-            self._tasks.pop(t).cancel()
+            task = self._tasks.pop(t)
+            task.cancel()
+            closing.append(task)
             self._queues.pop(t, None)
             st = self.sessions.pop(t, None)
             if st:
                 st.state = "stopped"
                 self.closed_cost_usd += st.cost_usd
+        if closing:  # let them close their connections (they would be abandoned otherwise)
+            await asyncio.wait(closing, timeout=3)
         for t in targets:
             if t not in self._tasks:
                 self._queues[t] = asyncio.Queue()
                 self.sessions[t] = SessionStatus(t)
                 self._tasks[t] = asyncio.create_task(self._run(t))
+
+    async def _close_all(self) -> None:
+        await self._set_targets([], self.echo)
+        rest = [x for x in asyncio.all_tasks() if x is not asyncio.current_task()]
+        for x in rest:  # anything left from the connections (keepalives)
+            x.cancel()
+        if rest:
+            await asyncio.wait(rest, timeout=2)
 
     def _config(self, target: str, handle: str | None):
         from google.genai import types
